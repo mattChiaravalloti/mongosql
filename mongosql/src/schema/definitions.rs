@@ -545,6 +545,8 @@ impl Ord for JaccardIndex {
     }
 }
 
+pub const MAX_NUM_DOC_UNIONS: u32 = 5;
+
 #[derive(Eq, PartialOrd, Ord, Clone, Default)]
 pub struct Document {
     pub keys: BTreeMap<String, Schema>,
@@ -552,6 +554,7 @@ pub struct Document {
     pub additional_properties: bool,
     // JaccardIndex is an optional field that is used to track the stability of the schema
     pub jaccard_index: Option<JaccardIndex>,
+    pub unstable: bool,
 }
 
 impl PartialEq for Document {
@@ -559,6 +562,7 @@ impl PartialEq for Document {
         self.keys == other.keys
             && self.required == other.required
             && self.additional_properties == other.additional_properties
+            && self.unstable == other.unstable
     }
 }
 
@@ -817,6 +821,7 @@ lazy_static! {
             required: set!["coordinates".to_string()],
             additional_properties: false,
             jaccard_index: None,
+            unstable: false,
         }),
         Schema::Array(Box::new(NUMERIC.clone())),
     ]);
@@ -874,6 +879,7 @@ lazy_static! {
             required: set!["coordinates".to_string()],
             additional_properties: false,
             jaccard_index: None,
+            unstable: false,
         }),
         Schema::Array(Box::new(NUMERIC.clone())),
         Schema::Atomic(Atomic::Null),
@@ -976,6 +982,15 @@ impl Schema {
         match self {
             Schema::Document(d) => d.keys.get_mut(key),
             _ => None,
+        }
+    }
+
+    /// Returns whether a schema is unstable. Only Document schemas are possibly unstable.
+    pub fn is_unstable(&self) -> bool {
+        match self {
+            Schema::Document(d) => d.unstable,
+            Schema::AnyOf(a) => a.iter().any(|s| s.is_unstable()),
+            _ => false,
         }
     }
 
@@ -2162,19 +2177,73 @@ impl Document {
 
     /// union unions together two Schema::Documents returning a single Document schema that matches
     /// all document values matched by either `self` or `other`. Additional properties will
-    /// be allowed if either `self` or `other` allows them.
+    /// be allowed if either `self` or `other` allows them. There are caveats to this if either
+    /// Document is unstable or if either has a JaccardIndex. See below.
     ///
-    /// If either of the two documents has a JaccardIndex, the union calculates the moving
-    /// average. Once the 5th union is reached, each union will inspect the index
-    /// and return a Document that allows any properties if the index is less than the
-    /// stability_limit specified in the JaccardIndex struct. Prior to comparison, the inverse
-    /// of the numer of unions is added to the average Jaccard index to allow for some variance,
-    /// becoming more sensitive as more unions are processed. Documents that are a subset or superset
-    /// of each other will be considered equivalent and will always have a JaccardIndex of 1.
+    /// If both Documents are stable, if either of the two documents has a JaccardIndex, the union
+    /// calculates the moving average. Once the 5th union is reached, each union will inspect the
+    /// index. If the index is less than the stability_limit specified in the JaccardIndex, the
+    /// union will proceed but will also mark the schema as unstable. Prior to comparison, the
+    /// inverse of the number of unions is added to the average Jaccard index to allow for some
+    /// variance, becoming more sensitive as more unions are processed. Documents that are a subset
+    /// or superset of each other will be considered equivalent and will always have a
+    /// JaccardIndex of 1.
+    ///
+    /// If both Documents are stable and neither has a JaccardIndex, the union will proceed as
+    /// initially described: returning a single Document schema that matches all document values
+    /// matched by either `self` or `other`. Additional properties will be allowed if either `self`
+    /// or `other` allows them.
+    ///
+    /// If exactly one of `self` or `other` is unstable -- meaning a previous union caused the
+    /// document's JaccardIndex to exceed the stability limit -- union is not attempted. Instead,
+    /// the stable schema will be returned with additional_properties set to true and the unstable
+    /// flag set to true.
+    ///
+    /// If both of the two documents are unstable, union is not attempted. Instead, the unstable
+    /// schema with the higher avg_ji value will be returned with additional_properties set to true.
+    /// If the avg_ji value is equal, then `self` is preferred.
     pub fn union(self, other: Document) -> Document {
-        if self == Document::any() || other == Document::any() {
-            return Document::any();
+        // If only self is stable and other is unstable, prefer self.
+        if !self.unstable && other.unstable {
+            return Document {
+                additional_properties: true,
+                unstable: true,
+                ..self
+            };
         }
+        // If only other is stable and self is unstable, prefer other.
+        if self.unstable && !other.unstable {
+            return Document {
+                additional_properties: true,
+                unstable: true,
+                ..other
+            };
+        }
+
+        if self.unstable && other.unstable {
+            let pref_doc = match (self.jaccard_index, other.jaccard_index) {
+                // If neither has a JaccardIndex, or only Self has one, prefer self.
+                (None, None) | (Some(_), None) => self,
+                // If only other has one, prefer other.
+                (None, Some(_)) => other,
+                // If both have a JaccardIndex, prefer the one with the larger avg_ji value. If
+                // those values are equal, prefer self.
+                (Some(self_ji), Some(other_ji)) => {
+                    if self_ji.avg_ji >= other_ji.avg_ji {
+                        self
+                    } else {
+                        other
+                    }
+                }
+            };
+            return Document {
+                additional_properties: true,
+                ..pref_doc
+            };
+        }
+
+        // If both are stable, attempt to union using Jaccard Index information, or union "normally"
+        // if no JaccardIndex info is present.
         if let Some(jaccard_index) = Document::get_jaccard_index(&self, &other) {
             let union = Document::union_keys(self.keys.clone(), other.keys.clone());
             let left_keys = self.keys.keys().collect::<HashSet<_>>();
@@ -2194,22 +2263,19 @@ impl Document {
 
             // as the number of unions grows, this number will become smaller and smaller
             let stabilization_rate = 1.0 / jaccard_index.num_unions as f64;
-            if jaccard_index.num_unions >= 5
-                && (jaccard_index.avg_ji + stabilization_rate) < jaccard_index.stability_limit
-            {
-                Document::any()
-            } else {
-                Document {
-                    keys: union,
-                    required: self
-                        .required
-                        .intersection(&other.required)
-                        .cloned()
-                        .collect(),
-                    additional_properties: self.additional_properties
-                        || other.additional_properties,
-                    jaccard_index: Some(jaccard_index),
-                }
+            let unstable = jaccard_index.num_unions >= MAX_NUM_DOC_UNIONS
+                && (jaccard_index.avg_ji + stabilization_rate) < jaccard_index.stability_limit;
+
+            Document {
+                keys: union,
+                required: self
+                    .required
+                    .intersection(&other.required)
+                    .cloned()
+                    .collect(),
+                additional_properties: self.additional_properties || other.additional_properties,
+                jaccard_index: Some(jaccard_index),
+                unstable,
             }
         } else {
             Document {
@@ -2263,6 +2329,7 @@ impl Document {
             required: self.required.into_iter().chain(other.required).collect(),
             additional_properties: self.additional_properties || other.additional_properties,
             jaccard_index,
+            unstable: self.unstable || other.unstable,
         }
     }
 

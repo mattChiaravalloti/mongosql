@@ -8,252 +8,56 @@ use crate::{
 lazy_static! {
     static ref A_DOCUMENT: Document = Document {
         keys: map! {
-            "a1".into() => Schema::Atomic(Atomic::Integer),
-            "a2".into() => Schema::Atomic(Atomic::Integer),
-            "a3".into() => Schema::Atomic(Atomic::Integer),
-            "a4".into() => Schema::Atomic(Atomic::Integer),
-            "a5".into() => Schema::Atomic(Atomic::Integer),
-            "a6".into() => Schema::Atomic(Atomic::Integer),
-            "a7".into() => Schema::Atomic(Atomic::Integer),
-            "a8".into() => Schema::Atomic(Atomic::Integer),
-            "a9".into() => Schema::Atomic(Atomic::Integer),
-            "a10".into() => Schema::Atomic(Atomic::Integer),
-            "a11".into() => Schema::Atomic(Atomic::Integer),
-            "a12".into() => Schema::Atomic(Atomic::Integer),
-            "a13".into() => Schema::Atomic(Atomic::Integer),
-            "a14".into() => Schema::Atomic(Atomic::Integer),
-            "a15".into() => Schema::Atomic(Atomic::Integer),
-            "a16".into() => Schema::Atomic(Atomic::Integer),
-            "a17".into() => Schema::Atomic(Atomic::Integer),
-            "a18".into() => Schema::Atomic(Atomic::Integer),
-            "a19".into() => Schema::Atomic(Atomic::Integer),
-            "a20".into() => Schema::Atomic(Atomic::Integer),
-            "a11".into() => Schema::Atomic(Atomic::Integer),
-            "a12".into() => Schema::Atomic(Atomic::Integer),
-            "a13".into() => Schema::Atomic(Atomic::Integer),
-            "a14".into() => Schema::Atomic(Atomic::Integer),
-            "a15".into() => Schema::Atomic(Atomic::Integer),
-            "a16".into() => Schema::Atomic(Atomic::Integer),
-            "a17".into() => Schema::Atomic(Atomic::Integer),
-            "a18".into() => Schema::Atomic(Atomic::Integer),
-            "a19".into() => Schema::Atomic(Atomic::Integer),
-            "a20".into() => Schema::Atomic(Atomic::Integer),
-        },
-        jaccard_index: JaccardIndex::default().into(),
-        ..Default::default()
-    };
-    static ref AB_DOCUMENT: Document = Document {
-        keys: map! {
-            "a1".into() => Schema::Atomic(Atomic::Integer),
-            "a2".into() => Schema::Atomic(Atomic::Integer),
-            "a3".into() => Schema::Atomic(Atomic::Integer),
-            "a4".into() => Schema::Atomic(Atomic::Integer),
-            "a5".into() => Schema::Atomic(Atomic::Integer),
-            "a6".into() => Schema::Atomic(Atomic::Integer),
-            "a7".into() => Schema::Atomic(Atomic::Integer),
-            "a8".into() => Schema::Atomic(Atomic::Integer),
-            "a9".into() => Schema::Atomic(Atomic::Integer),
-            "a10".into() => Schema::Atomic(Atomic::Integer),
-            "b11".into() => Schema::Atomic(Atomic::Integer),
-            "b12".into() => Schema::Atomic(Atomic::Integer),
-            "b13".into() => Schema::Atomic(Atomic::Integer),
-            "b14".into() => Schema::Atomic(Atomic::Integer),
-            "b15".into() => Schema::Atomic(Atomic::Integer),
-            "b16".into() => Schema::Atomic(Atomic::Integer),
-            "b17".into() => Schema::Atomic(Atomic::Integer),
-            "b18".into() => Schema::Atomic(Atomic::Integer),
-            "b19".into() => Schema::Atomic(Atomic::Integer),
-            "b20".into() => Schema::Atomic(Atomic::Integer),
-            "b11".into() => Schema::Atomic(Atomic::Integer),
-            "b12".into() => Schema::Atomic(Atomic::Integer),
-            "b13".into() => Schema::Atomic(Atomic::Integer),
-            "b14".into() => Schema::Atomic(Atomic::Integer),
-            "b15".into() => Schema::Atomic(Atomic::Integer),
-            "b16".into() => Schema::Atomic(Atomic::Integer),
-            "b17".into() => Schema::Atomic(Atomic::Integer),
-            "b18".into() => Schema::Atomic(Atomic::Integer),
-            "b19".into() => Schema::Atomic(Atomic::Integer),
-            "b20".into() => Schema::Atomic(Atomic::Integer),
+            "a".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
     };
     static ref B_DOCUMENT: Document = Document {
         keys: map! {
-            "b1".into() => Schema::Atomic(Atomic::Integer),
-            "b2".into() => Schema::Atomic(Atomic::Integer),
-            "b3".into() => Schema::Atomic(Atomic::Integer),
-            "b4".into() => Schema::Atomic(Atomic::Integer),
-            "b5".into() => Schema::Atomic(Atomic::Integer),
-            "b6".into() => Schema::Atomic(Atomic::Integer),
-            "b7".into() => Schema::Atomic(Atomic::Integer),
-            "b8".into() => Schema::Atomic(Atomic::Integer),
-            "b9".into() => Schema::Atomic(Atomic::Integer),
-            "b10".into() => Schema::Atomic(Atomic::Integer),
-            "b11".into() => Schema::Atomic(Atomic::Integer),
-            "b12".into() => Schema::Atomic(Atomic::Integer),
-            "b13".into() => Schema::Atomic(Atomic::Integer),
-            "b14".into() => Schema::Atomic(Atomic::Integer),
-            "b15".into() => Schema::Atomic(Atomic::Integer),
-            "b16".into() => Schema::Atomic(Atomic::Integer),
-            "b17".into() => Schema::Atomic(Atomic::Integer),
-            "b18".into() => Schema::Atomic(Atomic::Integer),
-            "b19".into() => Schema::Atomic(Atomic::Integer),
-            "b20".into() => Schema::Atomic(Atomic::Integer),
-            "b11".into() => Schema::Atomic(Atomic::Integer),
-            "b12".into() => Schema::Atomic(Atomic::Integer),
-            "b13".into() => Schema::Atomic(Atomic::Integer),
-            "b14".into() => Schema::Atomic(Atomic::Integer),
-            "b15".into() => Schema::Atomic(Atomic::Integer),
-            "b16".into() => Schema::Atomic(Atomic::Integer),
-            "b17".into() => Schema::Atomic(Atomic::Integer),
-            "b18".into() => Schema::Atomic(Atomic::Integer),
-            "b19".into() => Schema::Atomic(Atomic::Integer),
-            "b20".into() => Schema::Atomic(Atomic::Integer),
+            "b".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
     };
     static ref C_DOCUMENT: Document = Document {
         keys: map! {
-            "c1".into() => Schema::Atomic(Atomic::Integer),
-            "c2".into() => Schema::Atomic(Atomic::Integer),
-            "c3".into() => Schema::Atomic(Atomic::Integer),
-            "c4".into() => Schema::Atomic(Atomic::Integer),
-            "c5".into() => Schema::Atomic(Atomic::Integer),
-            "c6".into() => Schema::Atomic(Atomic::Integer),
-            "c7".into() => Schema::Atomic(Atomic::Integer),
-            "c8".into() => Schema::Atomic(Atomic::Integer),
-            "c9".into() => Schema::Atomic(Atomic::Integer),
-            "c10".into() => Schema::Atomic(Atomic::Integer),
-            "c11".into() => Schema::Atomic(Atomic::Integer),
-            "c12".into() => Schema::Atomic(Atomic::Integer),
-            "c13".into() => Schema::Atomic(Atomic::Integer),
-            "c14".into() => Schema::Atomic(Atomic::Integer),
-            "c15".into() => Schema::Atomic(Atomic::Integer),
-            "c16".into() => Schema::Atomic(Atomic::Integer),
-            "c17".into() => Schema::Atomic(Atomic::Integer),
-            "c18".into() => Schema::Atomic(Atomic::Integer),
-            "c19".into() => Schema::Atomic(Atomic::Integer),
-            "c20".into() => Schema::Atomic(Atomic::Integer),
-            "c11".into() => Schema::Atomic(Atomic::Integer),
-            "c12".into() => Schema::Atomic(Atomic::Integer),
-            "c13".into() => Schema::Atomic(Atomic::Integer),
-            "c14".into() => Schema::Atomic(Atomic::Integer),
-            "c15".into() => Schema::Atomic(Atomic::Integer),
-            "c16".into() => Schema::Atomic(Atomic::Integer),
-            "c17".into() => Schema::Atomic(Atomic::Integer),
-            "c18".into() => Schema::Atomic(Atomic::Integer),
-            "c19".into() => Schema::Atomic(Atomic::Integer),
-            "c20".into() => Schema::Atomic(Atomic::Integer),
+            "c".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
     };
     static ref D_DOCUMENT: Document = Document {
         keys: map! {
-            "d1".into() => Schema::Atomic(Atomic::Integer),
-            "d2".into() => Schema::Atomic(Atomic::Integer),
-            "d3".into() => Schema::Atomic(Atomic::Integer),
-            "d4".into() => Schema::Atomic(Atomic::Integer),
-            "d5".into() => Schema::Atomic(Atomic::Integer),
-            "d6".into() => Schema::Atomic(Atomic::Integer),
-            "d7".into() => Schema::Atomic(Atomic::Integer),
-            "d8".into() => Schema::Atomic(Atomic::Integer),
-            "d9".into() => Schema::Atomic(Atomic::Integer),
-            "d10".into() => Schema::Atomic(Atomic::Integer),
-            "d11".into() => Schema::Atomic(Atomic::Integer),
-            "d12".into() => Schema::Atomic(Atomic::Integer),
-            "d13".into() => Schema::Atomic(Atomic::Integer),
-            "d14".into() => Schema::Atomic(Atomic::Integer),
-            "d15".into() => Schema::Atomic(Atomic::Integer),
-            "d16".into() => Schema::Atomic(Atomic::Integer),
-            "d17".into() => Schema::Atomic(Atomic::Integer),
-            "d18".into() => Schema::Atomic(Atomic::Integer),
-            "d19".into() => Schema::Atomic(Atomic::Integer),
-            "d20".into() => Schema::Atomic(Atomic::Integer),
-            "d11".into() => Schema::Atomic(Atomic::Integer),
-            "d12".into() => Schema::Atomic(Atomic::Integer),
-            "d13".into() => Schema::Atomic(Atomic::Integer),
-            "d14".into() => Schema::Atomic(Atomic::Integer),
-            "d15".into() => Schema::Atomic(Atomic::Integer),
-            "d16".into() => Schema::Atomic(Atomic::Integer),
-            "d17".into() => Schema::Atomic(Atomic::Integer),
-            "d18".into() => Schema::Atomic(Atomic::Integer),
-            "d19".into() => Schema::Atomic(Atomic::Integer),
-            "d20".into() => Schema::Atomic(Atomic::Integer),
+            "d".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
     };
     static ref E_DOCUMENT: Document = Document {
         keys: map! {
-            "e1".into() => Schema::Atomic(Atomic::Integer),
-            "e2".into() => Schema::Atomic(Atomic::Integer),
-            "e3".into() => Schema::Atomic(Atomic::Integer),
-            "e4".into() => Schema::Atomic(Atomic::Integer),
-            "e5".into() => Schema::Atomic(Atomic::Integer),
-            "e6".into() => Schema::Atomic(Atomic::Integer),
-            "e7".into() => Schema::Atomic(Atomic::Integer),
-            "e8".into() => Schema::Atomic(Atomic::Integer),
-            "e9".into() => Schema::Atomic(Atomic::Integer),
-            "e10".into() => Schema::Atomic(Atomic::Integer),
-            "e11".into() => Schema::Atomic(Atomic::Integer),
-            "e12".into() => Schema::Atomic(Atomic::Integer),
-            "e13".into() => Schema::Atomic(Atomic::Integer),
-            "e14".into() => Schema::Atomic(Atomic::Integer),
-            "e15".into() => Schema::Atomic(Atomic::Integer),
-            "e16".into() => Schema::Atomic(Atomic::Integer),
-            "e17".into() => Schema::Atomic(Atomic::Integer),
-            "e18".into() => Schema::Atomic(Atomic::Integer),
-            "e19".into() => Schema::Atomic(Atomic::Integer),
-            "e20".into() => Schema::Atomic(Atomic::Integer),
-            "e11".into() => Schema::Atomic(Atomic::Integer),
-            "e12".into() => Schema::Atomic(Atomic::Integer),
-            "e13".into() => Schema::Atomic(Atomic::Integer),
-            "e14".into() => Schema::Atomic(Atomic::Integer),
-            "e15".into() => Schema::Atomic(Atomic::Integer),
-            "e16".into() => Schema::Atomic(Atomic::Integer),
-            "e17".into() => Schema::Atomic(Atomic::Integer),
-            "e18".into() => Schema::Atomic(Atomic::Integer),
-            "e19".into() => Schema::Atomic(Atomic::Integer),
-            "e20".into() => Schema::Atomic(Atomic::Integer),
+            "e".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
     };
     static ref F_DOCUMENT: Document = Document {
         keys: map! {
-            "f1".into() => Schema::Atomic(Atomic::Integer),
-            "f2".into() => Schema::Atomic(Atomic::Integer),
-            "f3".into() => Schema::Atomic(Atomic::Integer),
-            "f4".into() => Schema::Atomic(Atomic::Integer),
-            "f5".into() => Schema::Atomic(Atomic::Integer),
-            "f6".into() => Schema::Atomic(Atomic::Integer),
-            "f7".into() => Schema::Atomic(Atomic::Integer),
-            "f8".into() => Schema::Atomic(Atomic::Integer),
-            "f9".into() => Schema::Atomic(Atomic::Integer),
-            "f10".into() => Schema::Atomic(Atomic::Integer),
-            "f11".into() => Schema::Atomic(Atomic::Integer),
-            "f12".into() => Schema::Atomic(Atomic::Integer),
-            "f13".into() => Schema::Atomic(Atomic::Integer),
-            "f14".into() => Schema::Atomic(Atomic::Integer),
-            "f15".into() => Schema::Atomic(Atomic::Integer),
-            "f16".into() => Schema::Atomic(Atomic::Integer),
-            "f17".into() => Schema::Atomic(Atomic::Integer),
-            "f18".into() => Schema::Atomic(Atomic::Integer),
-            "f19".into() => Schema::Atomic(Atomic::Integer),
-            "f20".into() => Schema::Atomic(Atomic::Integer),
-            "f11".into() => Schema::Atomic(Atomic::Integer),
-            "f12".into() => Schema::Atomic(Atomic::Integer),
-            "f13".into() => Schema::Atomic(Atomic::Integer),
-            "f14".into() => Schema::Atomic(Atomic::Integer),
-            "f15".into() => Schema::Atomic(Atomic::Integer),
-            "f16".into() => Schema::Atomic(Atomic::Integer),
-            "f17".into() => Schema::Atomic(Atomic::Integer),
-            "f18".into() => Schema::Atomic(Atomic::Integer),
-            "f19".into() => Schema::Atomic(Atomic::Integer),
-            "f20".into() => Schema::Atomic(Atomic::Integer),
+            "f".into() => Schema::Atomic(Atomic::Integer),
+        },
+        jaccard_index: JaccardIndex::default().into(),
+        ..Default::default()
+    };
+    static ref G_DOCUMENT: Document = Document {
+        keys: map! {
+            "g".into() => Schema::Atomic(Atomic::Integer),
+        },
+        jaccard_index: JaccardIndex::default().into(),
+        ..Default::default()
+    };
+    static ref H_DOCUMENT: Document = Document {
+        keys: map! {
+            "h".into() => Schema::Atomic(Atomic::Integer),
         },
         jaccard_index: JaccardIndex::default().into(),
         ..Default::default()
@@ -261,7 +65,7 @@ lazy_static! {
 }
 
 mod jaccard {
-    use crate::schema::JaccardIndex;
+    use crate::{schema::JaccardIndex, set};
 
     use super::*;
 
@@ -272,20 +76,27 @@ mod jaccard {
             keys: map! {
                 "a".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex::new(0.8).into(),
-            ..Default::default()
+            required: set! {},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 1.0,
+                num_unions: 0,
+                stability_limit: 0.8,
+            }),
+            unstable: false,
         };
         let right = Document {
             keys: map! {
                 "b".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex {
+            required: set! {},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
                 avg_ji: 0.5,
                 num_unions: 1,
-                ..Default::default()
-            }
-            .into(),
-            ..Default::default()
+                stability_limit: 0.8,
+            }),
+            unstable: false,
         };
 
         let new_left = left.union(right);
@@ -306,6 +117,7 @@ mod jaccard {
     fn document_default_does_not_have_jaccard_index() {
         let doc = Document::default();
         assert!(doc.jaccard_index.is_none());
+        assert!(!doc.unstable);
     }
 
     #[test]
@@ -316,6 +128,7 @@ mod jaccard {
         };
         let new_doc = doc.clone().union(doc.clone());
         assert_eq!(new_doc.jaccard_index, doc.jaccard_index);
+        assert!(!new_doc.unstable);
     }
 
     #[test]
@@ -340,105 +153,276 @@ mod jaccard {
         let new_right = right.clone().union(left.clone());
 
         assert_eq!(new_left.jaccard_index.unwrap().avg_ji, 1.0);
+        assert!(!new_left.unstable);
         assert_eq!(new_right.jaccard_index.unwrap().avg_ji, 1.0);
+        assert!(!new_right.unstable);
     }
 
     #[test]
     fn four_unions_with_zero_jaccard_index_preserves_document() {
         let new_left = A_DOCUMENT.clone().union(B_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
+        assert!(!new_left.unstable);
         let new_left = new_left.union(C_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
+        assert!(!new_left.unstable);
         let new_left = new_left.union(D_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
+        assert!(!new_left.unstable);
         let new_left = new_left.union(E_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
-    }
-
-    #[test]
-    fn five_unions_with_zero_jaccard_index_is_any_document() {
-        let new_left = A_DOCUMENT.clone().union(B_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
-        let new_left = new_left.union(C_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
-        let new_left = new_left.union(D_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
-        let new_left = new_left.union(E_DOCUMENT.clone());
-        assert_ne!(new_left, Document::any());
-        let new_left = new_left.union(F_DOCUMENT.clone());
-        assert_eq!(new_left, Document::any());
-    }
-
-    #[test]
-    fn breaking_rate_threshold_results_in_any_document() {
-        let a_doc = Document {
+        assert!(new_left.eq_with_jaccard_index(&Document {
             keys: map! {
                 "a".into() => Schema::Atomic(Atomic::Integer),
                 "b".into() => Schema::Atomic(Atomic::Integer),
                 "c".into() => Schema::Atomic(Atomic::Integer),
                 "d".into() => Schema::Atomic(Atomic::Integer),
+                "e".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
+            required: set! {},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.0,
+                num_unions: 4,
+                stability_limit: 0.8,
+            }),
+            unstable: false,
+        }));
+    }
+
+    #[test]
+    fn five_unions_with_zero_jaccard_index_is_unstable() {
+        let new_left = A_DOCUMENT.clone().union(B_DOCUMENT.clone());
+        assert!(!new_left.unstable);
+        let new_left = new_left.union(C_DOCUMENT.clone());
+        assert!(!new_left.unstable);
+        let new_left = new_left.union(D_DOCUMENT.clone());
+        assert!(!new_left.unstable);
+        let new_left = new_left.union(E_DOCUMENT.clone());
+        assert!(!new_left.unstable);
+        let new_left = new_left.union(F_DOCUMENT.clone());
+        assert!(new_left.eq_with_jaccard_index(&Document {
+            keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+                "b".into() => Schema::Atomic(Atomic::Integer),
+                "c".into() => Schema::Atomic(Atomic::Integer),
+                "d".into() => Schema::Atomic(Atomic::Integer),
+                "e".into() => Schema::Atomic(Atomic::Integer),
+                "f".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.0,
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
+        }))
+    }
+
+    #[test]
+    fn union_stable_and_unstable_schemas_returns_the_stable_schema_marked_as_unstable() {
+        let stable_doc = Document {
+            keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer)
+            },
+            required: set! {"a".into()},
+            additional_properties: false,
+            // In this example, we assume we've unioned 10 documents that all had the same schema.
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 1.0,
+                num_unions: 10,
+                stability_limit: 0.8,
+            }),
+            unstable: false,
         };
-        let b_doc = Document {
+
+        let unstable_doc = Document {
             keys: map! {
                 "b".into() => Schema::Atomic(Atomic::Integer),
                 "c".into() => Schema::Atomic(Atomic::Integer),
                 "d".into() => Schema::Atomic(Atomic::Integer),
                 "e".into() => Schema::Atomic(Atomic::Integer),
+                "f".into() => Schema::Atomic(Atomic::Integer),
+                "g".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
+            required: set! {},
+            additional_properties: false,
+            // In this example, we assume we've unioned 5 documents that all had unique schema.
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.0,
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
         };
-        let c_doc = Document {
+
+        let expected_doc = Document {
             keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"a".into()},
+            additional_properties: true,
+            jaccard_index: Some(JaccardIndex {
+                // ((weighted avg_ji for stable_doc and unstable_doc) * total # unions) / (total # unions + 1)
+                avg_ji: (10f64 * 15f64) / 16f64,
+                // 10 unions from stable_doc + 5 unions from unstable_doc + 1 union of them together
+                num_unions: 16,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
+        };
+
+        // When we union a stable document and an unstable document, we want to retain the stable
+        // schema but also mark it as unstable and set additional_properties to true.
+        let actual_doc = stable_doc.clone().union(unstable_doc.clone());
+        assert!(
+            actual_doc.eq_with_jaccard_index(&expected_doc),
+            "Incorrect document union result"
+        );
+
+        // Order should not impact this behavior
+        let actual_doc = unstable_doc.union(stable_doc);
+        assert!(
+            actual_doc.eq_with_jaccard_index(&expected_doc),
+            "Incorrect document union result"
+        );
+    }
+
+    #[test]
+    fn union_between_unstable_docs_prefers_schema_with_larger_avg_ji() {
+        // Recall that the updated avg_ji is computed with the formula:
+        //   new_avg_ji = (prev_avg_ji * num_unions + intersection_size / union_size) / (num_unions + 1)
+        // Assume this document schema is the result of unioning the following 6 documents:
+        // 1. { a: 1 }
+        // 2. { a: 1, b: 1 }
+        // 3. { a: 1, c: 1 }
+        // 4. { a: 1, d: 1 }
+        // 5. { a: 1, e: 1 }
+        // 6. { a: 1, f: 1 }
+        // That results in the Jaccard Index updating as follows as each document is unioned:
+        // 1. num_unions = 0, avg_ji = 1
+        // 2. num_unions = 1, avg_ji = 1 / 2
+        // 3. num_unions = 2, avg_ji = (1/2 * 1 + 1/3) / 2 = 5 / 12
+        // 4. num_unions = 3, avg_ji = (5/12 * 2 + 1/4) / 3 = 13 / 36
+        // 5. num_unions = 4, avg_ji = (13/36 * 3 + 1/5) / 4 = 77 / 240
+        // 6. num_unions = 5, avg_ji = (77/240 * 4 + 1/6) / 5 = 29 / 100
+        let unstable_doc_1 = Document {
+            keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+                "b".into() => Schema::Atomic(Atomic::Integer),
                 "c".into() => Schema::Atomic(Atomic::Integer),
                 "d".into() => Schema::Atomic(Atomic::Integer),
                 "e".into() => Schema::Atomic(Atomic::Integer),
                 "f".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
+            required: set! {"a".into()},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.29,
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
         };
-        let d_doc = Document {
+
+        // Assume this document schema is the result of unioning the following 6 documents:
+        // 1. { a: 1 }
+        // 2. { a: 1, b: 1 }
+        // 3. { a: 1, c: 1 }
+        // 4. { a: 1, d: 1 }
+        // 5. { a: 1, e: 1 }
+        // 6. { f: 1 }
+        // That results in the Jaccard Index updating as follows as each document is unioned:
+        // 1. num_unions = 0, avg_ji = 1
+        // 2. num_unions = 1, avg_ji = 1 / 2
+        // 3. num_unions = 2, avg_ji = (1/2 * 1 + 1/3) / 2 = 5 / 12
+        // 4. num_unions = 3, avg_ji = (5/12 * 2 + 1/4) / 3 = 13 / 36
+        // 5. num_unions = 4, avg_ji = (13/36 * 3 + 1/5) / 4 = 77 / 240
+        // 6. num_unions = 5, avg_ji = (77/240 * 4 + 0/6) / 5 = 77 / 300
+        let unstable_doc_2 = Document {
             keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+                "b".into() => Schema::Atomic(Atomic::Integer),
+                "c".into() => Schema::Atomic(Atomic::Integer),
                 "d".into() => Schema::Atomic(Atomic::Integer),
                 "e".into() => Schema::Atomic(Atomic::Integer),
                 "f".into() => Schema::Atomic(Atomic::Integer),
-                "g".into() => Schema::Atomic(Atomic::Integer),
             },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
-        };
-        let e_doc = Document {
-            keys: map! {
-                "e".into() => Schema::Atomic(Atomic::Integer),
-                "f".into() => Schema::Atomic(Atomic::Integer),
-                "g".into() => Schema::Atomic(Atomic::Integer),
-                "h".into() => Schema::Atomic(Atomic::Integer),
-            },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
-        };
-        let f_doc = Document {
-            keys: map! {
-                "f".into() => Schema::Atomic(Atomic::Integer),
-                "g".into() => Schema::Atomic(Atomic::Integer),
-                "h".into() => Schema::Atomic(Atomic::Integer),
-                "i".into() => Schema::Atomic(Atomic::Integer),
-            },
-            jaccard_index: JaccardIndex::default().into(),
-            ..Default::default()
+            required: set! {},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.256, // estimated value, the true value is .256666...
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
         };
 
-        let new_left = a_doc
-            .union(b_doc)
-            .union(c_doc)
-            .union(d_doc)
-            .union(e_doc)
-            .union(f_doc);
-        assert_eq!(new_left, Document::any());
+        // When we union an unstable document and an unstable document, we want to retain schema
+        // with the higher avg_ji value and mark it with additional_properties true.
+        let new_doc = unstable_doc_1.clone().union(unstable_doc_2.clone());
+        assert!(new_doc.eq_with_jaccard_index(&Document {
+            additional_properties: true,
+            ..unstable_doc_1.clone()
+        }));
+
+        // Order should not impact this behavior
+        let new_doc = unstable_doc_2.union(unstable_doc_1.clone());
+        assert!(new_doc.eq_with_jaccard_index(&Document {
+            additional_properties: true,
+            ..unstable_doc_1
+        }));
+    }
+
+    #[test]
+    fn union_between_unstable_docs_with_equal_avg_ji_prefers_left() {
+        let unstable_doc_1 = Document {
+            keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+                "b".into() => Schema::Atomic(Atomic::Integer),
+                "c".into() => Schema::Atomic(Atomic::Integer),
+                "d".into() => Schema::Atomic(Atomic::Integer),
+                "e".into() => Schema::Atomic(Atomic::Integer),
+                "f".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"a".into()},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.29,
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
+        };
+
+        let unstable_doc_2 = Document {
+            keys: map! {
+                "a".into() => Schema::Atomic(Atomic::Integer),
+                "b".into() => Schema::Atomic(Atomic::Integer),
+                "c".into() => Schema::Atomic(Atomic::Integer),
+                "d".into() => Schema::Atomic(Atomic::Integer),
+                "e".into() => Schema::Atomic(Atomic::Integer),
+                "f".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"b".into()},
+            additional_properties: false,
+            jaccard_index: Some(JaccardIndex {
+                avg_ji: 0.29,
+                num_unions: 5,
+                stability_limit: 0.8,
+            }),
+            unstable: true,
+        };
+
+        let new_doc = unstable_doc_1.clone().union(unstable_doc_2.clone());
+        assert!(new_doc.eq_with_jaccard_index(&Document {
+            additional_properties: true,
+            ..unstable_doc_1.clone()
+        }));
+
+        let new_doc = unstable_doc_2.clone().union(unstable_doc_1);
+        assert!(new_doc.eq_with_jaccard_index(&Document {
+            additional_properties: true,
+            ..unstable_doc_2
+        }))
     }
 
     #[test]
@@ -472,7 +456,7 @@ mod jaccard {
     }
 
     #[test]
-    fn some_insability_is_tolerated() {
+    fn some_instability_is_tolerated() {
         let a_doc = Document {
             keys: map! {
                 "a".into() => Schema::Atomic(Atomic::Integer),
@@ -490,13 +474,13 @@ mod jaccard {
             .union(a_doc.clone())
             .union(a_doc.clone())
             .union(a_doc.clone())
-            .union(A_DOCUMENT.clone())
-            .union(B_DOCUMENT.clone())
+            .union(E_DOCUMENT.clone())
+            .union(F_DOCUMENT.clone())
             .union(a_doc.clone())
             .union(a_doc.clone())
             .union(a_doc.clone());
 
-        assert_ne!(new_left, Document::any());
+        assert!(!new_left.unstable);
     }
 
     #[test]
@@ -518,15 +502,12 @@ mod jaccard {
             .union(a_doc.clone())
             .union(a_doc.clone())
             .union(a_doc.clone())
-            .union(A_DOCUMENT.clone())
-            .union(B_DOCUMENT.clone())
-            .union(a_doc.clone())
-            .union(a_doc.clone())
-            .union(a_doc.clone())
-            .union(C_DOCUMENT.clone())
-            .union(D_DOCUMENT.clone());
+            .union(E_DOCUMENT.clone())
+            .union(F_DOCUMENT.clone())
+            .union(G_DOCUMENT.clone())
+            .union(H_DOCUMENT.clone());
 
-        assert_eq!(new_left, Document::any());
+        assert!(new_left.unstable);
     }
 
     #[test]
@@ -763,7 +744,24 @@ mod jaccard {
             keys: map! {
                 "a".into() => Schema::Document(Document {
                     keys: map! {
-                        "b".into() => Schema::Document(Document::any()),
+                        "b".into() => Schema::Document(Document {
+                            keys: map! {
+                                "a".into() => Schema::Atomic(Atomic::Integer),
+                                "b".into() => Schema::Atomic(Atomic::Integer),
+                                "c".into() => Schema::Atomic(Atomic::Integer),
+                                "d".into() => Schema::Atomic(Atomic::Integer),
+                                "e".into() => Schema::Atomic(Atomic::Integer),
+                                "f".into() => Schema::Atomic(Atomic::Integer),
+                            },
+                            required: set!{},
+                            additional_properties: false,
+                            jaccard_index: Some(JaccardIndex {
+                                avg_ji: 0.0,
+                                num_unions: 5,
+                                stability_limit: 0.8,
+                            }),
+                            unstable: true,
+                        }),
                     },
                     jaccard_index: JaccardIndex::default().into(),
                     ..Default::default()
