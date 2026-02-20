@@ -545,7 +545,7 @@ impl Ord for JaccardIndex {
     }
 }
 
-pub const MAX_NUM_DOC_UNIONS: u32 = 5;
+pub const MAX_NUM_DOC_UNIONS: u32 = 19;
 
 #[derive(Eq, PartialOrd, Ord, Clone, Default)]
 pub struct Document {
@@ -593,6 +593,7 @@ impl std::fmt::Debug for Document {
         debug.field("keys", &self.keys);
         debug.field("required", &self.required);
         debug.field("additional_properties", &self.additional_properties);
+        debug.field("unstable", &self.unstable);
         debug.finish()
     }
 }
@@ -2203,41 +2204,50 @@ impl Document {
     /// schema with the higher avg_ji value will be returned with additional_properties set to true.
     /// If the avg_ji value is equal, then `self` is preferred.
     pub fn union(self, other: Document) -> Document {
-        // If only self is stable and other is unstable, prefer self.
-        if !self.unstable && other.unstable {
-            return Document {
-                additional_properties: true,
-                unstable: true,
-                ..self
-            };
-        }
-        // If only other is stable and self is unstable, prefer other.
-        if self.unstable && !other.unstable {
-            return Document {
-                additional_properties: true,
-                unstable: true,
-                ..other
-            };
-        }
-
-        if self.unstable && other.unstable {
-            let pref_doc = match (self.jaccard_index, other.jaccard_index) {
-                // If neither has a JaccardIndex, or only Self has one, prefer self.
-                (None, None) | (Some(_), None) => self,
-                // If only other has one, prefer other.
-                (None, Some(_)) => other,
-                // If both have a JaccardIndex, prefer the one with the larger avg_ji value. If
-                // those values are equal, prefer self.
-                (Some(self_ji), Some(other_ji)) => {
-                    if self_ji.avg_ji >= other_ji.avg_ji {
-                        self
-                    } else {
-                        other
+        if self.unstable || other.unstable {
+            let (pref_doc, other_doc) = if self.unstable && other.unstable {
+                match (self.jaccard_index, other.jaccard_index) {
+                    // If neither has a JaccardIndex, or only Self has one, prefer self.
+                    (None, None) | (Some(_), None) => (self.clone(), other.clone()),
+                    // If only other has one, prefer other.
+                    (None, Some(_)) => (other.clone(), self.clone()),
+                    // If both have a JaccardIndex, prefer the one with the larger avg_ji value. If
+                    // those values are equal, prefer self.
+                    (Some(self_ji), Some(other_ji)) => {
+                        if self_ji.avg_ji >= other_ji.avg_ji {
+                            (self.clone(), other.clone())
+                        } else {
+                            (other.clone(), self.clone())
+                        }
                     }
                 }
+            } else if self.unstable {
+                (other.clone(), self.clone())
+            } else {
+                (self.clone(), other.clone())
             };
+
+            let required = pref_doc
+                .required
+                .intersection(&other_doc.required)
+                .cloned()
+                .collect();
+
+            let other_contains_extra_keys = other_doc
+                .keys
+                .keys()
+                .any(|k| !pref_doc.keys.contains_key(k));
+
+            // We know there are additional properties if either has additional properties or if any
+            // of the non-preferred document's keys do not appear in the preferred document's keyset
+            let additional_properties = pref_doc.additional_properties
+                || other_doc.additional_properties
+                || other_contains_extra_keys;
+
             return Document {
-                additional_properties: true,
+                required,
+                additional_properties,
+                unstable: true,
                 ..pref_doc
             };
         }
