@@ -16,6 +16,7 @@ mod binary;
 mod case;
 mod date_function;
 mod extract;
+mod higher_order_functions;
 mod identifier_and_subpath;
 mod literal;
 mod scalar_function;
