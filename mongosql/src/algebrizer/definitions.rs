@@ -1488,7 +1488,7 @@ impl<'a> Algebrizer<'a> {
             ast::Expression::Subquery(s) => self.algebrize_subquery(*s),
             ast::Expression::SubqueryComparison(s) => self.algebrize_subquery_comparison(s),
             ast::Expression::Exists(e) => self.algebrize_exists(*e),
-            ast::Expression::HigherOrderFunction(_) => unimplemented!("SQL-3293"),
+            ast::Expression::HigherOrderFunction(h) => self.algebrize_higher_order_function(h),
         }
     }
 
@@ -2670,6 +2670,29 @@ impl<'a> Algebrizer<'a> {
             // Otherwise, check the next highest scope.
             current_scope -= 1;
         }
+    }
+
+    fn algebrize_higher_order_function(
+        &self,
+        expr: ast::HigherOrderFunctionExpr,
+    ) -> Result<mir::Expression> {
+        match expr {
+            ast::HigherOrderFunctionExpr::Map(expr) => self.algebrize_map(expr),
+            ast::HigherOrderFunctionExpr::Filter(expr) => self.algebrize_filter_expr(expr),
+            ast::HigherOrderFunctionExpr::Reduce(expr) => self.algebrize_reduce(expr),
+        }
+    }
+
+    fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
+        todo!()
+    }
+
+    fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
+        todo!()
+    }
+
+    fn algebrize_reduce(&self, expr: ast::ReduceExpr) -> Result<mir::Expression> {
+        todo!()
     }
 }
 
