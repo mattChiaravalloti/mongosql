@@ -3,7 +3,7 @@ use super::*;
 test_algebrize!(
     cast_full,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::Cast(mir::CastExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         to: mir::Type::String,
@@ -30,7 +30,7 @@ test_algebrize!(
 test_algebrize!(
     cast_simple,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::Cast(mir::CastExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         to: mir::Type::String,
@@ -49,7 +49,7 @@ test_algebrize!(
 test_algebrize!(
     type_assert_success,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::TypeAssertion(mir::TypeAssertionExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         target_type: mir::Type::Int32,
@@ -63,7 +63,7 @@ test_algebrize!(
 test_algebrize_expr_and_schema_check!(
     type_assert_fail,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Err(Error::SchemaChecking(mir::schema::Error::SchemaChecking {
         name: "::!",
         required: Schema::Atomic(Atomic::String).into(),
@@ -80,7 +80,7 @@ test_algebrize_expr_and_schema_check!(
 test_algebrize!(
     type_assert_ext_json_string_does_not_convert_if_target_type_is_string,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::TypeAssertion(mir::TypeAssertionExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::String(
             "{\"$numberInt\": \"42\"}".to_string()
@@ -98,7 +98,7 @@ test_algebrize!(
 test_algebrize!(
     type_assert_ext_json_string_converts_if_target_type_is_not_string,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::TypeAssertion(mir::TypeAssertionExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         target_type: mir::Type::Int32,
@@ -114,7 +114,7 @@ test_algebrize!(
 test_algebrize!(
     is_success,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::Is(mir::IsExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         target_type: mir::TypeOrMissing::Type(mir::Type::Int32),
@@ -128,7 +128,7 @@ test_algebrize!(
 test_algebrize_expr_and_schema_check!(
     is_recursive_failure,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Err(Error::SchemaChecking(mir::schema::Error::SchemaChecking {
         name: "Add",
         required: NUMERIC_OR_NULLISH.clone().into(),
@@ -149,7 +149,7 @@ test_algebrize_expr_and_schema_check!(
 test_algebrize!(
     is_implicit_converts_ext_json,
     method = algebrize_expression,
-    in_implicit_type_conversion_context = false,
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::Is(mir::IsExpr {
         expr: Box::new(mir::Expression::Literal(mir::LiteralValue::Integer(42))),
         target_type: mir::TypeOrMissing::Type(mir::Type::Int32),
