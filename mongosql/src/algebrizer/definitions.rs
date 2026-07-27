@@ -1,13 +1,13 @@
 use crate::mir::ArrayExpr;
 use crate::{
-    algebrizer::errors::Error,
+    algebrizer::errors::{Error, HigherOrderFunctionErrorCause},
     ast::{self, pretty_print::PrettyPrint},
     catalog::Catalog,
     map,
     mir::{
         self,
         binding_tuple::{BindingTuple, DatasourceName, Key},
-        schema::{CachedSchema, SchemaCache, SchemaInferenceState},
+        schema::{CachedSchema, SchemaCache, SchemaInferenceState, THIS_VARIABLE, VALUE_VARIABLE},
         AliasedExpr, Expression, FieldAccess, OptionallyAliasedExpr, ReferenceExpr,
     },
     schema::{
@@ -240,6 +240,19 @@ pub struct Algebrizer<'a> {
     expression_context: ExpressionContext,
 }
 
+/// HigherOrderFunctionCtx indicates the higher order function in which an expression is being
+/// algebrized, if any. For `Map` and `Filter` contexts, the boolean value indicates the nullability
+/// of the `this` variable; for `Reduce` contexts, the boolean values indicate the nullability of
+/// the `this` and `value` variables, respectively.
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Default)]
+pub(crate) enum HigherOrderFunctionCtx {
+    #[default]
+    None,
+    Map(bool),
+    Filter(bool),
+    Reduce(bool, bool),
+}
+
 /// ExpressionContext contains information about the context in which an expression is being
 /// algebrized. In certain contexts, certain ast::Expressions are resolved differently. See fields
 /// for more information.
@@ -251,12 +264,29 @@ pub(crate) struct ExpressionContext {
     // unexpected to be strings. MongoSQL supports implicit type conversion from extended-JSON
     // encoded string literals to the corresponding BSON type in these contexts.
     in_implicit_type_conversion_ctx: bool,
+
+    // Indicates if the expression is being algebrized in the context of a higher order function
+    // function-argument. For example, in the expression MAP(array, this + 1), when algebrizing the
+    // function-argument `this + 1`, we set this value to HigherOrderFunctionCtx::Map. When in a
+    // non-None context, certain unqualified identifiers are resolved to variables instead of field
+    // references. Specifically, in the Map and Filter contexts, unqualified identifiers with the
+    // value "this" are resolved to the variable `this`; in the Reduce context, unqualified
+    // identifiers with the value "this" or "value" are resolved to the variables `this` or `value`,
+    // respectively.
+    in_higher_order_function_arg_ctx: HigherOrderFunctionCtx,
 }
 
 impl ExpressionContext {
     pub(crate) fn with_implicit_type_conversion_ctx(self, value: bool) -> Self {
         Self {
             in_implicit_type_conversion_ctx: value,
+        }
+    }
+
+    pub(crate) fn with_higher_order_function_arg_ctx(self, value: HigherOrderFunctionCtx) -> Self {
+        Self {
+            in_higher_order_function_arg_ctx: value,
+            ..self
         }
     }
 }
@@ -348,6 +378,13 @@ impl<'a> Algebrizer<'a> {
         self.with_expression_context(
             self.expression_context
                 .with_implicit_type_conversion_ctx(value),
+        )
+    }
+
+    fn with_higher_order_function_arg_ctx(&self, value: HigherOrderFunctionCtx) -> Self {
+        self.with_expression_context(
+            self.expression_context
+                .with_higher_order_function_arg_ctx(value),
         )
     }
 
@@ -2526,6 +2563,28 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_unqualified_identifier(&self, i: String) -> Result<mir::Expression> {
+        // If we are in the context of a Higher Order Function, unqualified identifiers may be
+        // variables instead of fields. Specifically, an unqualified "this" is always considered a
+        // variable in the context of any Higher Order Function, and an unqualified "value" is
+        // considered a variable in the context of Reduce.
+        let (is_hof_variable, is_nullable) =
+            match self.expression_context.in_higher_order_function_arg_ctx {
+                HigherOrderFunctionCtx::Map(is_nullable)
+                | HigherOrderFunctionCtx::Filter(is_nullable) => (i == THIS_VARIABLE, is_nullable),
+                HigherOrderFunctionCtx::Reduce(this_is_nullable, value_is_nullable) => (
+                    i == THIS_VARIABLE || i == VALUE_VARIABLE,
+                    (i == THIS_VARIABLE && this_is_nullable)
+                        || (i == VALUE_VARIABLE && value_is_nullable),
+                ),
+                HigherOrderFunctionCtx::None => (false, false),
+            };
+        if is_hof_variable {
+            return Ok(mir::Expression::Variable(mir::Variable {
+                name: i,
+                is_nullable,
+            }));
+        }
+
         // Attempt to find a datasource for this unqualified reference
         // at _any_ scope level.
         // If we find exactly one datasource that May or Must contain
@@ -2684,7 +2743,54 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
-        todo!()
+        let array = self.algebrize_expression(*expr.array).map_err(|e| {
+            Self::wrap_error_in_hof_context("Map", e, HigherOrderFunctionErrorCause::ArrayArg)
+        })?;
+
+        // Determine the nullability of the `this` variable in the function argument. If the array
+        // item schema is nullable, the `this` variable is nullable.
+        let this_nullability = array
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Map",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::ArrayArg,
+                )
+            })?
+            .get_array_item_schema()
+            .map(|s| s.satisfies(&NULLISH) != Satisfaction::Not)
+            .unwrap_or(false);
+
+        let fn_algebrizer =
+            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map(this_nullability));
+        let f = match *expr.f {
+            ast::FunctionArgument::Expr(e) => {
+                fn_algebrizer.algebrize_expression(e).map_err(|e| {
+                    Self::wrap_error_in_hof_context(
+                        "Map",
+                        e,
+                        HigherOrderFunctionErrorCause::FunctionArg,
+                    )
+                })?
+            }
+            ast::FunctionArgument::NamedFunction(f) => {
+                unreachable!("{:?} should have been rewritten", f)
+            }
+        };
+
+        // Nullability is based only on the array argument. The function argument being nullable
+        // does not affect the nullability of the Map expression, just the nullability of the
+        // elements of the output array.
+        let is_nullable = Self::args_are_nullable(&[array.clone()]);
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
+                array: Box::new(array),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
     }
 
     fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
@@ -2693,6 +2799,18 @@ impl<'a> Algebrizer<'a> {
 
     fn algebrize_reduce(&self, expr: ast::ReduceExpr) -> Result<mir::Expression> {
         todo!()
+    }
+
+    fn wrap_error_in_hof_context(
+        name: &'static str,
+        error: Error,
+        cause: HigherOrderFunctionErrorCause,
+    ) -> Error {
+        Error::HigherOrderFunctionWrapper {
+            name,
+            cause,
+            error: Box::new(error),
+        }
     }
 }
 
