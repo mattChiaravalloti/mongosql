@@ -17,7 +17,11 @@ use crate::{
     util::unique_linked_hash_map::UniqueLinkedHashMap,
     SchemaCheckingMode,
 };
-use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -238,19 +242,18 @@ pub struct Algebrizer<'a> {
     allow_order_by_missing_columns: bool,
     clause_type: RefCell<ClauseType>,
     expression_context: ExpressionContext,
+    variables: BTreeMap<&'static str, schema::Schema>,
 }
 
 /// HigherOrderFunctionCtx indicates the higher order function in which an expression is being
-/// algebrized, if any. For `Map` and `Filter` contexts, the boolean value indicates the nullability
-/// of the `this` variable; for `Reduce` contexts, the boolean values indicate the nullability of
-/// the `this` and `value` variables, respectively.
+/// algebrized, if any.
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub(crate) enum HigherOrderFunctionCtx {
     #[default]
     None,
-    Map(bool),
-    Filter(bool),
-    Reduce(bool, bool),
+    Map,
+    Filter,
+    Reduce,
 }
 
 /// ExpressionContext contains information about the context in which an expression is being
@@ -309,6 +312,7 @@ impl<'a> Algebrizer<'a> {
             allow_order_by_missing_columns,
             clause_type,
             ExpressionContext::default(),
+            map! {},
         )
     }
 
@@ -322,6 +326,7 @@ impl<'a> Algebrizer<'a> {
         allow_order_by_missing_columns: bool,
         clause_type: ClauseType,
         expression_context: ExpressionContext,
+        variables: BTreeMap<&'static str, schema::Schema>,
     ) -> Self {
         Self {
             current_db,
@@ -332,6 +337,7 @@ impl<'a> Algebrizer<'a> {
             allow_order_by_missing_columns,
             clause_type: RefCell::new(clause_type),
             expression_context,
+            variables,
         }
     }
 
@@ -341,7 +347,7 @@ impl<'a> Algebrizer<'a> {
             catalog: self.catalog,
             scope_level: self.scope_level,
             schema_checking_mode: self.schema_checking_mode,
-            variables: map! {},
+            variables: self.variables.clone(),
         }
     }
 
@@ -358,7 +364,30 @@ impl<'a> Algebrizer<'a> {
             // state.
             clause_type: RefCell::new(*self.clause_type.borrow()),
             expression_context: self.expression_context,
+            variables: self.variables.clone(),
         }
+    }
+
+    pub(crate) fn with_variables(&self, variables: BTreeMap<&'static str, schema::Schema>) -> Self {
+        Self {
+            current_db: self.current_db,
+            schema_env: self.schema_env.clone(),
+            catalog: self.catalog,
+            scope_level: self.scope_level,
+            schema_checking_mode: self.schema_checking_mode,
+            allow_order_by_missing_columns: self.allow_order_by_missing_columns,
+            clause_type: RefCell::new(*self.clause_type.borrow()),
+            expression_context: self.expression_context,
+            variables,
+        }
+    }
+
+    /// Gets the nullability of a variable. If the variable is not present, `true` is returned.
+    fn variable_is_nullable(&self, variable: &'static str) -> bool {
+        self.variables
+            .get(variable)
+            .map(|s| s.satisfies(&NULLISH) != Satisfaction::Not)
+            .unwrap_or(true)
     }
 
     pub(crate) fn with_expression_context(&self, context: ExpressionContext) -> Self {
@@ -371,6 +400,7 @@ impl<'a> Algebrizer<'a> {
             allow_order_by_missing_columns: self.allow_order_by_missing_columns,
             clause_type: RefCell::new(*self.clause_type.borrow()),
             expression_context: context,
+            variables: self.variables.clone(),
         }
     }
 
@@ -438,6 +468,7 @@ impl<'a> Algebrizer<'a> {
         Ok(Self {
             schema_env: Rc::new(merged_env),
             clause_type: RefCell::new(*self.clause_type.borrow()),
+            variables: self.variables.clone(),
             ..*self
         })
     }
@@ -1056,6 +1087,7 @@ impl<'a> Algebrizer<'a> {
             self.allow_order_by_missing_columns,
             *self.clause_type.borrow(),
             self.expression_context,
+            self.variables.clone(),
         );
 
         let path = match path {
@@ -2569,12 +2601,14 @@ impl<'a> Algebrizer<'a> {
         // considered a variable in the context of Reduce.
         let (is_hof_variable, is_nullable) =
             match self.expression_context.in_higher_order_function_arg_ctx {
-                HigherOrderFunctionCtx::Map(is_nullable)
-                | HigherOrderFunctionCtx::Filter(is_nullable) => (i == THIS_VARIABLE, is_nullable),
-                HigherOrderFunctionCtx::Reduce(this_is_nullable, value_is_nullable) => (
+                HigherOrderFunctionCtx::Map | HigherOrderFunctionCtx::Filter => {
+                    (i == THIS_VARIABLE, self.variable_is_nullable(THIS_VARIABLE))
+                }
+
+                HigherOrderFunctionCtx::Reduce => (
                     i == THIS_VARIABLE || i == VALUE_VARIABLE,
-                    (i == THIS_VARIABLE && this_is_nullable)
-                        || (i == VALUE_VARIABLE && value_is_nullable),
+                    (i == THIS_VARIABLE && self.variable_is_nullable(THIS_VARIABLE))
+                        || (i == VALUE_VARIABLE && self.variable_is_nullable(VALUE_VARIABLE)),
                 ),
                 HigherOrderFunctionCtx::None => (false, false),
             };
@@ -2747,9 +2781,8 @@ impl<'a> Algebrizer<'a> {
             Self::wrap_error_in_hof_context("Map", e, HigherOrderFunctionErrorCause::ArrayArg)
         })?;
 
-        // Determine the nullability of the `this` variable in the function argument. If the array
-        // item schema is nullable, the `this` variable is nullable.
-        let this_nullability = array
+        // Determine the schema of the `this` variable in the function argument.
+        let this_schema = array
             .schema(&self.schema_inference_state())
             .map_err(|e| {
                 Self::wrap_error_in_hof_context(
@@ -2758,12 +2791,13 @@ impl<'a> Algebrizer<'a> {
                     HigherOrderFunctionErrorCause::ArrayArg,
                 )
             })?
-            .get_array_item_schema()
-            .map(|s| s.satisfies(&NULLISH) != Satisfaction::Not)
-            .unwrap_or(false);
+            .get_array_item_schema();
 
-        let fn_algebrizer =
-            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map(this_nullability));
+        let mut fn_algebrizer =
+            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map);
+        if let Some(this_schema) = this_schema {
+            fn_algebrizer = fn_algebrizer.with_variables(map! { THIS_VARIABLE => this_schema });
+        }
         let f = match *expr.f {
             ast::FunctionArgument::Expr(e) => {
                 fn_algebrizer.algebrize_expression(e).map_err(|e| {
@@ -2794,7 +2828,54 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
-        todo!()
+        let array = self.algebrize_expression(*expr.array).map_err(|e| {
+            Self::wrap_error_in_hof_context("Filter", e, HigherOrderFunctionErrorCause::ArrayArg)
+        })?;
+
+        // Determine the schema of the `this` variable in the function argument.
+        let this_schema = array
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Map",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::ArrayArg,
+                )
+            })?
+            .get_array_item_schema();
+
+        let mut fn_algebrizer =
+            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map);
+        if let Some(this_schema) = this_schema {
+            fn_algebrizer = fn_algebrizer.with_variables(map! { THIS_VARIABLE => this_schema });
+        }
+        let f = match *expr.f {
+            ast::FunctionArgument::Expr(e) => {
+                fn_algebrizer.algebrize_expression(e).map_err(|e| {
+                    Self::wrap_error_in_hof_context(
+                        "Filter",
+                        e,
+                        HigherOrderFunctionErrorCause::FunctionArg,
+                    )
+                })?
+            }
+            ast::FunctionArgument::NamedFunction(f) => {
+                unreachable!("{:?} should have been rewritten", f)
+            }
+        };
+
+        // Nullability is based only on the array argument. The function argument being nullable
+        // does not affect the nullability of the Map expression, just the nullability of the
+        // elements of the output array.
+        let is_nullable = Self::args_are_nullable(&[array.clone()]);
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Filter(mir::FilterExpr {
+                array: Box::new(array),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
     }
 
     fn algebrize_reduce(&self, expr: ast::ReduceExpr) -> Result<mir::Expression> {

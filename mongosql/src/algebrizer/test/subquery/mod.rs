@@ -3,7 +3,7 @@ use crate::{
     ast, map,
     mir::{binding_tuple::DatasourceName, schema::SchemaCache, *},
     multimap,
-    schema::{Atomic, Document, Schema},
+    schema::{Atomic, Document},
     set, unchecked_unique_linked_hash_map,
     usererror::UserError,
 };

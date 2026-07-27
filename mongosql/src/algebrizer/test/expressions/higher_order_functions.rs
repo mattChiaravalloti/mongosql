@@ -480,7 +480,7 @@ mod filter {
                 })),
                 f: Box::new(mir::Expression::ScalarFunction(
                     mir::ScalarFunctionApplication {
-                        function: mir::ScalarFunction::Add,
+                        function: mir::ScalarFunction::Eq,
                         args: vec![
                             mir::Expression::Variable(mir::Variable {
                                 name: "this".to_string(),

@@ -3,7 +3,6 @@ use crate::{
     ast,
     mir::{schema::SchemaCache, *},
     usererror::UserError,
-    Schema,
 };
 
 test_algebrize!(
