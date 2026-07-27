@@ -231,4 +231,62 @@ mod map {
             }),
         },
     );
+
+    test_algebrize!(
+        invalid_array_arg,
+        method = algebrize_expression,
+        expected = Err(Error::HigherOrderFunctionWrapper {
+            name: "Map",
+            cause: HigherOrderFunctionErrorCause::ArrayArg,
+            error: Box::new(Error::FieldNotFound(
+                "foo".to_string(),
+                None,
+                ClauseType::Unintialized,
+                0u16
+            )),
+        }),
+        expected_error_code = 3035,
+        input =
+            ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
+                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    subpath: "a".to_string(),
+                })),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
+                    ast::Literal::Integer(1)
+                ))),
+            })),
+    );
+
+    test_algebrize!(
+        invalid_function_arg,
+        method = algebrize_expression,
+        expected = Err(Error::HigherOrderFunctionWrapper {
+            name: "Map",
+            cause: HigherOrderFunctionErrorCause::FunctionArg,
+            error: Box::new(Error::FieldNotFound(
+                "foo".to_string(),
+                None,
+                ClauseType::Unintialized,
+                0u16
+            )),
+        }),
+        expected_error_code = 3035,
+        input =
+            ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Array(vec![ast::Expression::Literal(
+                    ast::Literal::Integer(1)
+                )])),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
+                    ast::BinaryExpr {
+                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        op: ast::BinaryOp::Add,
+                        right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
+                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            subpath: "this".to_string(),
+                        })),
+                    }
+                ))),
+            })),
+    );
 }
