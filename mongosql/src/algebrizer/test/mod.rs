@@ -19,7 +19,7 @@ macro_rules! test_algebrize {
         fn $func_name() {
             #[allow(unused_imports)]
             use $crate::{
-                algebrizer::{Algebrizer, ExpressionContext, Error, ClauseType},
+                algebrizer::{Algebrizer, ExpressionContext, HigherOrderFunctionCtx, Error, ClauseType},
                 algebrizer::errors::HigherOrderFunctionErrorCause,
                 catalog::Catalog,
                 SchemaCheckingMode,

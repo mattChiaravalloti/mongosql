@@ -549,3 +549,167 @@ test_algebrize!(
     expected_error_code = 3008,
     input = ast::Expression::Identifier("bar".into()),
 );
+
+test_algebrize!(
+    unqualified_this_in_map_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map(true)),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "this".into(),
+        is_nullable: true,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document( Document {
+            keys: map! {
+                "this".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_this_in_filter_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Filter(false)),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "this".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document( Document {
+            keys: map! {
+                "this".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_this_in_reduce_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Reduce(true, false)),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "this".into(),
+        is_nullable: true,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document( Document {
+            keys: map! {
+                "this".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_this_is_field_when_no_hof_context,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::None),
+    expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
+        expr: Box::new(mir::Expression::Reference(("foo", 0u16).into())),
+        field: "this".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document( Document {
+            keys: map! {
+                "this".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_value_in_map_context_is_error_when_no_field_with_that_name_exists,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map(true)),
+    expected = Err(Error::FieldNotFound(
+        "value".into(),
+        None,
+        ClauseType::Unintialized,
+        0u16,
+    )),
+    expected_error_code = 3008,
+    input = ast::Expression::Identifier("value".into()),
+);
+
+test_algebrize!(
+    unqualified_value_in_filter_context_is_error_when_no_field_with_that_name_exists,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Filter(true)),
+    expected = Err(Error::FieldNotFound(
+        "value".into(),
+        None,
+        ClauseType::Unintialized,
+        0u16,
+    )),
+    expected_error_code = 3008,
+    input = ast::Expression::Identifier("value".into()),
+);
+
+test_algebrize!(
+    unqualified_value_in_reduce_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Reduce(false, true)),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "value".into(),
+        is_nullable: true,
+    })),
+    input = ast::Expression::Identifier("value".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document( Document {
+            keys: map! {
+                "value".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"value".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_value_is_field_when_no_hof_context,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default()
+        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::None),
+    expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
+        expr: Box::new(mir::Expression::Reference(("foo", 1u16).into())),
+        field: "value".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("value".into()),
+    env = map! {
+        ("foo", 1u16).into() => Schema::Document( Document {
+            keys: map! {
+                "value".into() => Schema::Atomic( Atomic::Integer),
+            },
+            required: set! {"value".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
