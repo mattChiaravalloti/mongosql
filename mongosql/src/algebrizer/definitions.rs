@@ -2776,33 +2776,39 @@ impl<'a> Algebrizer<'a> {
         }
     }
 
-    fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
-        let array = self.algebrize_expression(*expr.array).map_err(|e| {
-            Self::wrap_error_in_hof_context("Map", e, HigherOrderFunctionErrorCause::ArrayArg)
+    fn algebrize_hof_common(
+        &self,
+        name: &'static str,
+        array: Box<ast::Expression>,
+        f: Box<ast::FunctionArgument>,
+        hof_ctx: HigherOrderFunctionCtx,
+    ) -> Result<(mir::Expression, mir::Expression, bool)> {
+        let array = self.algebrize_expression(*array).map_err(|e| {
+            Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::ArrayArg)
         })?;
 
-        // Determine the schema of the `this` variable in the function argument.
+        // Determine the schema of the `this` variable in the function argument. This is used to
+        // determine the `is_nullable` value for any `this` Variable expressions.
         let this_schema = array
             .schema(&self.schema_inference_state())
             .map_err(|e| {
                 Self::wrap_error_in_hof_context(
-                    "Map",
+                    name,
                     e.into(),
                     HigherOrderFunctionErrorCause::ArrayArg,
                 )
             })?
             .get_array_item_schema();
 
-        let mut fn_algebrizer =
-            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map);
+        let mut fn_algebrizer = self.with_higher_order_function_arg_ctx(hof_ctx);
         if let Some(this_schema) = this_schema {
             fn_algebrizer = fn_algebrizer.with_variables(map! { THIS_VARIABLE => this_schema });
         }
-        let f = match *expr.f {
+        let f = match *f {
             ast::FunctionArgument::Expr(e) => {
                 fn_algebrizer.algebrize_expression(e).map_err(|e| {
                     Self::wrap_error_in_hof_context(
-                        "Map",
+                        name,
                         e,
                         HigherOrderFunctionErrorCause::FunctionArg,
                     )
@@ -2817,6 +2823,13 @@ impl<'a> Algebrizer<'a> {
         // does not affect the nullability of the Map expression, just the nullability of the
         // elements of the output array.
         let is_nullable = Self::args_are_nullable(&[array.clone()]);
+
+        Ok((array, f, is_nullable))
+    }
+
+    fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
+        let (array, f, is_nullable) =
+            self.algebrize_hof_common("Map", expr.array, expr.f, HigherOrderFunctionCtx::Map)?;
 
         Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
@@ -2828,46 +2841,12 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
-        let array = self.algebrize_expression(*expr.array).map_err(|e| {
-            Self::wrap_error_in_hof_context("Filter", e, HigherOrderFunctionErrorCause::ArrayArg)
-        })?;
-
-        // Determine the schema of the `this` variable in the function argument.
-        let this_schema = array
-            .schema(&self.schema_inference_state())
-            .map_err(|e| {
-                Self::wrap_error_in_hof_context(
-                    "Map",
-                    e.into(),
-                    HigherOrderFunctionErrorCause::ArrayArg,
-                )
-            })?
-            .get_array_item_schema();
-
-        let mut fn_algebrizer =
-            self.with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map);
-        if let Some(this_schema) = this_schema {
-            fn_algebrizer = fn_algebrizer.with_variables(map! { THIS_VARIABLE => this_schema });
-        }
-        let f = match *expr.f {
-            ast::FunctionArgument::Expr(e) => {
-                fn_algebrizer.algebrize_expression(e).map_err(|e| {
-                    Self::wrap_error_in_hof_context(
-                        "Filter",
-                        e,
-                        HigherOrderFunctionErrorCause::FunctionArg,
-                    )
-                })?
-            }
-            ast::FunctionArgument::NamedFunction(f) => {
-                unreachable!("{:?} should have been rewritten", f)
-            }
-        };
-
-        // Nullability is based only on the array argument. The function argument being nullable
-        // does not affect the nullability of the Map expression, just the nullability of the
-        // elements of the output array.
-        let is_nullable = Self::args_are_nullable(&[array.clone()]);
+        let (array, f, is_nullable) = self.algebrize_hof_common(
+            "Filter",
+            expr.array,
+            expr.f,
+            HigherOrderFunctionCtx::Filter,
+        )?;
 
         Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Filter(mir::FilterExpr {
