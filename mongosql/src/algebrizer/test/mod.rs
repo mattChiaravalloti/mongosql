@@ -34,9 +34,10 @@ macro_rules! test_algebrize {
 
             #[allow(unused_mut, unused_assignments)]
             let mut algebrizer = Algebrizer::new("test".into(), &catalog, 0u16, schema_checking_mode, false, ClauseType::Unintialized);
-            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized);)?
+            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default());)?
+            $(algebrizer = algebrizer.with_expression_context($expression_context);)?
 
-            let res: Result<_, Error> = algebrizer.$method($ast $(, $source)? $(, $expression_context)? $(, $is_add_fields)?);
+            let res: Result<_, Error> = algebrizer.$method($ast $(, $source)? $(, $is_add_fields)?);
             $(assert!(matches!(res, $expected_pat));)?
             $(assert_eq!($expected, res);)?
 
@@ -71,9 +72,10 @@ macro_rules! test_algebrize_expr_and_schema_check {
 
             #[allow(unused_mut, unused_assignments)]
             let mut algebrizer = Algebrizer::new("test".into(), &catalog, 0u16, schema_checking_mode, false, ClauseType::Unintialized);
-            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized);)?
+            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default());)?
+            $(algebrizer = algebrizer.with_expression_context($expression_context);)?
 
-            let res: Result<_, Error> = algebrizer.$method($ast $(, $source)? $(, $expression_context)?);
+            let res: Result<_, Error> = algebrizer.$method($ast $(, $source)?);
             let res = res.unwrap().schema(&algebrizer.schema_inference_state()).map_err(|e|Error::SchemaChecking(e));
             $(assert_eq!($expected, res);)?
 
