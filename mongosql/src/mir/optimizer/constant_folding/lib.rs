@@ -31,6 +31,9 @@ lazy_static! {
     static ref DEFAULT_CATALOG: Catalog = Catalog::default();
 }
 
+const MAX_F64_AS_STR: &str = "179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+const MIN_F64_AS_STR: &str = "-179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+
 impl ConstantFoldExprVisitor<'_> {
     // Checks if a vector of expressions contains a null or missing expression
     fn has_null_arg(&self, args: &[Expression]) -> bool {
@@ -933,8 +936,9 @@ impl ConstantFoldExprVisitor<'_> {
             LiteralValue::Null => None,
 
             // False converts to 0, true converts to 1.
-            LiteralValue::Boolean(false) => Some(Ok(Expression::Literal(LiteralValue::Integer(0)))),
-            LiteralValue::Boolean(true) => Some(Ok(Expression::Literal(LiteralValue::Integer(1)))),
+            LiteralValue::Boolean(b) => {
+                Some(Ok(Expression::Literal(LiteralValue::Integer((*b).into()))))
+            }
 
             // Integers are trivially converted to themselves.
             LiteralValue::Integer(v) => Some(Ok(Expression::Literal(LiteralValue::Integer(*v)))),
@@ -1053,10 +1057,9 @@ impl ConstantFoldExprVisitor<'_> {
             LiteralValue::Null => None,
 
             // False converts to 0, true converts to 1.
-            LiteralValue::Boolean(false) => {
-                Some(Ok(Expression::Literal(LiteralValue::Double(0.0))))
+            LiteralValue::Boolean(b) => {
+                Some(Ok(Expression::Literal(LiteralValue::Double((*b).into()))))
             }
-            LiteralValue::Boolean(true) => Some(Ok(Expression::Literal(LiteralValue::Double(1.0)))),
 
             // Doubles are trivially converted to themselves.
             LiteralValue::Double(v) => Some(Ok(Expression::Literal(LiteralValue::Double(*v)))),
@@ -1099,7 +1102,18 @@ impl ConstantFoldExprVisitor<'_> {
                     )))),
                     v => match f64::from_str(v) {
                         Ok(f) if f.is_finite() => {
-                            Some(Ok(Expression::Literal(LiteralValue::Double(f))))
+                            // It is possible for a string to represent an f64 smaller than f64::MIN
+                            // or larger than f64::MAX, but for it to parse as f64::MIN or f64::MAX,
+                            // respectively. If this is the case, we should return an error since
+                            // MongoDB does not tolerate such values. (Note that we do the is_finite
+                            // check above because typically values out of range parse into +/-inf.)
+                            if (f == f64::MAX && v != MAX_F64_AS_STR)
+                                || (f == f64::MIN && v != MIN_F64_AS_STR)
+                            {
+                                Some(Err(()))
+                            } else {
+                                Some(Ok(Expression::Literal(LiteralValue::Double(f))))
+                            }
                         }
                         _ => Some(Err(())),
                     },
@@ -1134,8 +1148,9 @@ impl ConstantFoldExprVisitor<'_> {
             LiteralValue::Null => None,
 
             // False converts to 0, true converts to 1.
-            LiteralValue::Boolean(false) => Some(Ok(Expression::Literal(LiteralValue::Long(0)))),
-            LiteralValue::Boolean(true) => Some(Ok(Expression::Literal(LiteralValue::Long(1)))),
+            LiteralValue::Boolean(b) => {
+                Some(Ok(Expression::Literal(LiteralValue::Long((*b).into()))))
+            }
 
             // Longs are trivially converted to themselves.
             LiteralValue::Long(v) => Some(Ok(Expression::Literal(LiteralValue::Long(*v)))),

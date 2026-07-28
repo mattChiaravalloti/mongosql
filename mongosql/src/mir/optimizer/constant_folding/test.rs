@@ -3826,18 +3826,32 @@ mod cast {
         );
 
         test_constant_fold_cast_literal!(
-            from_string_greater_than_max_f64_literal,
+            from_string_greater_than_max_f64_literal_that_parses_to_inf,
             expected_expr = Expression::Literal(LiteralValue::String("error".into())),
             input_expr = Expression::Literal(LiteralValue::String(format!("1{}", f64::MAX))),
             input_to = Type::Double,
         );
 
         test_constant_fold_cast_literal!(
-            from_string_less_than_min_f64_literal,
+            from_string_greater_than_max_f64_literal_that_parses_to_max_f64,
+            expected_expr = Expression::Literal(LiteralValue::String("error".into())),
+            input_expr = Expression::Literal(LiteralValue::String("179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000100000".to_string())),
+            input_to = Type::Double,
+        );
+
+        test_constant_fold_cast_literal!(
+            from_string_less_than_min_f64_literal_that_parses_to_neg_inf,
             expected_expr = Expression::Literal(LiteralValue::String("error".into())),
             input_expr = Expression::Literal(LiteralValue::String(
                 format!("{}", f64::MIN).replacen('1', "2", 1)
             )),
+            input_to = Type::Double,
+        );
+
+        test_constant_fold_cast_literal!(
+            from_string_less_than_min_f64_literal_that_parses_to_min_f64,
+            expected_expr = Expression::Literal(LiteralValue::String("error".into())),
+            input_expr = Expression::Literal(LiteralValue::String("-179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000001000000".to_string())),
             input_to = Type::Double,
         );
 
