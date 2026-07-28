@@ -2776,6 +2776,9 @@ impl<'a> Algebrizer<'a> {
         }
     }
 
+    /// Common algebrization for Map and Filter. Reduce requires some extra steps, such as initial
+    /// value algebrization and potential function argument re-algebrization. Given that, Reduce
+    /// does not use this method.
     fn algebrize_hof_common(
         &self,
         name: &'static str,
@@ -2788,7 +2791,8 @@ impl<'a> Algebrizer<'a> {
         })?;
 
         // Determine the schema of the `this` variable in the function argument. This is used to
-        // determine the `is_nullable` value for any `this` Variable expressions.
+        // determine the `is_nullable` value for any `this` Variable expressions in the function
+        // argument.
         let this_schema = array
             .schema(&self.schema_inference_state())
             .map_err(|e| {
@@ -2804,20 +2808,7 @@ impl<'a> Algebrizer<'a> {
         if let Some(this_schema) = this_schema {
             fn_algebrizer = fn_algebrizer.with_variables(map! { THIS_VARIABLE => this_schema });
         }
-        let f = match *f {
-            ast::FunctionArgument::Expr(e) => {
-                fn_algebrizer.algebrize_expression(e).map_err(|e| {
-                    Self::wrap_error_in_hof_context(
-                        name,
-                        e,
-                        HigherOrderFunctionErrorCause::FunctionArg,
-                    )
-                })?
-            }
-            ast::FunctionArgument::NamedFunction(f) => {
-                unreachable!("{:?} should have been rewritten", f)
-            }
-        };
+        let f = fn_algebrizer.algebrize_hof_function_argument(name, f)?;
 
         // Nullability is based only on the array argument. The function argument being nullable
         // does not affect the nullability of the Map expression, just the nullability of the
@@ -2825,6 +2816,21 @@ impl<'a> Algebrizer<'a> {
         let is_nullable = Self::args_are_nullable(&[array.clone()]);
 
         Ok((array, f, is_nullable))
+    }
+
+    fn algebrize_hof_function_argument(
+        &self,
+        name: &'static str,
+        f: Box<ast::FunctionArgument>,
+    ) -> Result<mir::Expression> {
+        match *f {
+            ast::FunctionArgument::Expr(e) => self.algebrize_expression(e).map_err(|e| {
+                Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::FunctionArg)
+            }),
+            ast::FunctionArgument::NamedFunction(f) => {
+                unreachable!("{:?} should have been rewritten in {name}", f)
+            }
+        }
     }
 
     fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
@@ -2858,7 +2864,110 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_reduce(&self, expr: ast::ReduceExpr) -> Result<mir::Expression> {
-        todo!()
+        // First, algebrize the array.
+        let array = self.algebrize_expression(*expr.array).map_err(|e| {
+            Self::wrap_error_in_hof_context("Reduce", e, HigherOrderFunctionErrorCause::ArrayArg)
+        })?;
+
+        // Determine the schema of that `this` variable in the function argument. This is used to
+        // determine the `is_nullable` value for any `this` Variable expressions in the function
+        // argument.
+        let this_schema = array
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::ArrayArg,
+                )
+            })?
+            .get_array_item_schema();
+
+        // Next, algebrize the initial value.
+        let init_value = self.algebrize_expression(*expr.init_value).map_err(|e| {
+            Self::wrap_error_in_hof_context(
+                "Reduce",
+                e,
+                HigherOrderFunctionErrorCause::InitialValue,
+            )
+        })?;
+
+        // Determine the initial schema of the `value` variable in the function argument. This is
+        // used to determine the `is_nullable` value for any `value` Variable expressions in the
+        // function argument. We may need to update those variables later. See the comments below.
+        let init_value_schema = init_value
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::InitialValue,
+                )
+            })?;
+
+        // Create an Algebrizer with the appropriate state for algebrizing the function argument.
+        let mut variables: BTreeMap<&'static str, schema::Schema> =
+            map! { VALUE_VARIABLE => init_value_schema.clone() };
+        if let Some(this_schema) = this_schema {
+            variables.insert(THIS_VARIABLE, this_schema);
+        }
+        let mut fn_algebrizer = self
+            .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Reduce)
+            .with_variables(variables.clone());
+
+        // Finally, algebrize the function argument.
+        let mut f = fn_algebrizer.algebrize_hof_function_argument("Reduce", expr.f.clone())?;
+
+        // Now that we've algebrized the function argument, we may need to update the nullability of
+        // any `value` Variable expressions in the function argument. This is because `value` only
+        // uses the `init_value` schema initially, and then takes on the `f` schema. The following
+        // truth table indicates the nullability of `value` variables:
+        //
+        //   init_value_schema    |    f_schema  |  value var is_nullable
+        //   ---------------------+--------------+------------------------
+        //    nullable            | nullable     | true
+        //    nullable            | not nullable | true
+        //    not nullable        | nullable     | true
+        //    not nullable        | not nullable | false
+        //
+        // That is, if either the `init_value` schema or the `f` schema is nullable, all `value`
+        // Variable expressions in the function argument are nullable. We only need to re-algebrize
+        // if the `init_value` schema is not nullable and the `f` schema is nullable.
+        let f_value_schema = f
+            .schema(&fn_algebrizer.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::FunctionArg,
+                )
+            })?;
+
+        if init_value_schema.satisfies(&NULLISH) == Satisfaction::Not
+            && f_value_schema.satisfies(&NULLISH) != Satisfaction::Not
+        {
+            // Overwrite the `value` variable schema with the `f` schema.
+            variables.insert(VALUE_VARIABLE, f_value_schema.clone());
+
+            // Update the function algebrizer with the updated variables.
+            fn_algebrizer = fn_algebrizer.with_variables(variables);
+
+            // Re-algebrize the function argument.
+            f = fn_algebrizer.algebrize_hof_function_argument("Reduce", expr.f)?;
+        }
+
+        // Nullability is based on all arguments. If any of them are nullable, the Reduce expression
+        // is nullable.
+        let is_nullable = Self::args_are_nullable(&[array.clone(), init_value.clone(), f.clone()]);
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Reduce(mir::ReduceExpr {
+                array: Box::new(array),
+                init_value: Box::new(init_value),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
     }
 
     fn wrap_error_in_hof_context(

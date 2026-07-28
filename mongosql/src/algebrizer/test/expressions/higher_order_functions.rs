@@ -713,7 +713,7 @@ mod reduce {
                     name: "this".to_string(),
                     is_nullable: true,
                 })),
-                is_nullable: false,
+                is_nullable: true,
             })
         )),
         input = ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Reduce(
@@ -851,7 +851,7 @@ mod reduce {
                         key: ("foo", 0u16).into(),
                     })),
                     field: "field".to_string(),
-                    is_nullable: false,
+                    is_nullable: true,
                 })),
                 f: Box::new(mir::Expression::ScalarFunction(
                     mir::ScalarFunctionApplication {
