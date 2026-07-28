@@ -283,6 +283,7 @@ impl ExpressionContext {
     pub(crate) fn with_implicit_type_conversion_ctx(self, value: bool) -> Self {
         Self {
             in_implicit_type_conversion_ctx: value,
+            ..self
         }
     }
 

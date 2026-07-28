@@ -7,7 +7,6 @@ mod map {
     test_algebrize!(
         no_variables,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::Array(mir::ArrayExpr {
@@ -32,7 +31,6 @@ mod map {
     test_algebrize!(
         nullable,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::FieldAccess(mir::FieldAccess {
@@ -72,7 +70,6 @@ mod map {
     test_algebrize!(
         with_this_variable,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::Array(mir::ArrayExpr {
@@ -100,7 +97,6 @@ mod map {
     test_algebrize!(
         with_nullable_this_variable,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::Array(mir::ArrayExpr {
@@ -132,7 +128,6 @@ mod map {
     test_algebrize!(
         with_this_variable_multiple_times,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::Array(mir::ArrayExpr {
@@ -176,7 +171,6 @@ mod map {
     test_algebrize!(
         with_this_variable_and_field_access,
         method = algebrize_expression,
-        in_implicit_type_conversion_context = false,
         expected = Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
                 array: Box::new(mir::Expression::Array(mir::ArrayExpr {
