@@ -2782,11 +2782,11 @@ impl<'a> Algebrizer<'a> {
     fn algebrize_hof_common(
         &self,
         name: &'static str,
-        array: Box<ast::Expression>,
-        f: Box<ast::FunctionArgument>,
+        array: ast::Expression,
+        f: ast::FunctionArgument,
         hof_ctx: HigherOrderFunctionCtx,
     ) -> Result<(mir::Expression, mir::Expression, bool)> {
-        let array = self.algebrize_expression(*array).map_err(|e| {
+        let array = self.algebrize_expression(array).map_err(|e| {
             Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::ArrayArg)
         })?;
 
@@ -2813,7 +2813,7 @@ impl<'a> Algebrizer<'a> {
         // Nullability is based only on the array argument. The function argument being nullable
         // does not affect the nullability of the Map expression, just the nullability of the
         // elements of the output array.
-        let is_nullable = Self::args_are_nullable(&[array.clone()]);
+        let is_nullable = Self::args_are_nullable(std::slice::from_ref(&array));
 
         Ok((array, f, is_nullable))
     }
@@ -2821,9 +2821,9 @@ impl<'a> Algebrizer<'a> {
     fn algebrize_hof_function_argument(
         &self,
         name: &'static str,
-        f: Box<ast::FunctionArgument>,
+        f: ast::FunctionArgument,
     ) -> Result<mir::Expression> {
-        match *f {
+        match f {
             ast::FunctionArgument::Expr(e) => self.algebrize_expression(e).map_err(|e| {
                 Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::FunctionArg)
             }),
@@ -2835,7 +2835,7 @@ impl<'a> Algebrizer<'a> {
 
     fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
         let (array, f, is_nullable) =
-            self.algebrize_hof_common("Map", expr.array, expr.f, HigherOrderFunctionCtx::Map)?;
+            self.algebrize_hof_common("Map", *expr.array, *expr.f, HigherOrderFunctionCtx::Map)?;
 
         Ok(mir::Expression::HigherOrderFunction(
             mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
@@ -2849,8 +2849,8 @@ impl<'a> Algebrizer<'a> {
     fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
         let (array, f, is_nullable) = self.algebrize_hof_common(
             "Filter",
-            expr.array,
-            expr.f,
+            *expr.array,
+            *expr.f,
             HigherOrderFunctionCtx::Filter,
         )?;
 
@@ -2916,7 +2916,7 @@ impl<'a> Algebrizer<'a> {
             .with_variables(variables.clone());
 
         // Finally, algebrize the function argument.
-        let mut f = fn_algebrizer.algebrize_hof_function_argument("Reduce", expr.f.clone())?;
+        let mut f = fn_algebrizer.algebrize_hof_function_argument("Reduce", *expr.f.clone())?;
 
         // Now that we've algebrized the function argument, we may need to update the nullability of
         // any `value` Variable expressions in the function argument. This is because `value` only
@@ -2953,7 +2953,7 @@ impl<'a> Algebrizer<'a> {
             fn_algebrizer = fn_algebrizer.with_variables(variables);
 
             // Re-algebrize the function argument.
-            f = fn_algebrizer.algebrize_hof_function_argument("Reduce", expr.f)?;
+            f = fn_algebrizer.algebrize_hof_function_argument("Reduce", *expr.f)?;
         }
 
         // Nullability is based on all arguments. If any of them are nullable, the Reduce expression
