@@ -775,7 +775,7 @@ impl<'a> Algebrizer<'a> {
             // to algebrize it in an implicit type conversion context. We do this because we do not
             // want to confuse users with seemingly inconsistent behavior. For example, if the user
             // wrote `... FROM foo JOIN bar ON 'false'` and we implicitly converted the `'false'` to
-            // `fasle`, the join condition would fail for all rows. But if they wrote `... FROM foo
+            // `false`, the join condition would fail for all rows. But if they wrote `... FROM foo
             // JOIN bar ON 'false'::BOOL`, the `CAST` would convert the `'false'` to `true`! And the
             // join condition would succeed for all rows! This is because in MongoDB, any String
             // unconditionally converts to true when casting to a Boolean. Given that potential for
@@ -1114,7 +1114,7 @@ impl<'a> Algebrizer<'a> {
                     // choose not to algebrize it in an implicit type conversion context. We do this
                     // because we do not want to confuse users with seemingly inconsistent behavior.
                     // For example, if the user wrote `... FROM foo WHERE 'false'` and we implicitly
-                    // converted the `'false'` to `fasle`, the filter would fail for all rows. But
+                    // converted the `'false'` to `false`, the filter would fail for all rows. But
                     // if they wrote `... FROM foo WHERE 'false'::BOOL`, the `CAST` would convert
                     // the `'false'` to `true`, and the filter would succeed for all rows! This is
                     // because in MongoDB, any String unconditionally converts to true when casting
