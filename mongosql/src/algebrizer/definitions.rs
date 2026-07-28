@@ -769,7 +769,6 @@ impl<'a> Algebrizer<'a> {
         let left_src_result_set = left_src.schema(&self.schema_inference_state())?;
         let right_src_result_set = right_src.schema(&self.schema_inference_state())?;
         let condition_algebrizer = self
-            .clone()
             .with_merged_mappings(left_src_result_set.schema_env)?
             .with_merged_mappings(right_src_result_set.schema_env)?
             // Although the condition expression is expected to Boolean (or nullish), we choose not
@@ -1108,7 +1107,6 @@ impl<'a> Algebrizer<'a> {
             None => source,
             Some(expr) => {
                 let expression_algebrizer = self
-                    .clone()
                     .with_merged_mappings(
                         source.schema(&self.schema_inference_state())?.schema_env,
                     )?
@@ -1287,7 +1285,6 @@ impl<'a> Algebrizer<'a> {
     ) -> Result<mir::Stage> {
         *self.clause_type.borrow_mut() = ClauseType::OrderBy;
         let expression_algebrizer = self
-            .clone()
             .with_merged_mappings(source.schema(&self.schema_inference_state())?.schema_env)?
             // We should not algebrize the sort key exprs in an implicit type conversion
             // context since there is no specific type expected for these values.
@@ -1344,7 +1341,6 @@ impl<'a> Algebrizer<'a> {
             None => source,
             Some(ast_expr) => {
                 let expression_algebrizer = self
-                    .clone()
                     .with_merged_mappings(
                         source.schema(&self.schema_inference_state())?.schema_env,
                     )?
@@ -2250,8 +2246,8 @@ impl<'a> Algebrizer<'a> {
         let itc_algebrizer = self.with_implicit_type_conversion_ctx(true);
         let non_itc_algebrizer = self.with_implicit_type_conversion_ctx(false);
 
-        // if we don't have an else branch, the resulting case expression _is_ nullable; otherwise, we will
-        // check the then and else expressions to determine nullability
+        // if we don't have an else branch, the resulting case expression _is_ nullable; otherwise,
+        // we will check the then and else expressions to determine nullability
         let mut is_nullable = c.else_branch.is_none();
         let else_branch = c
             .else_branch
@@ -2265,8 +2261,8 @@ impl<'a> Algebrizer<'a> {
             .map(Box::new)
             .unwrap_or_else(|| Box::new(mir::Expression::Literal(mir::LiteralValue::Null)));
 
-        // algebrize the when branches without implicit casting, keeping track of the schema of all of the when expressions
-        // to inform how we algebrize the expr
+        // algebrize the `when` branches without implicit casting, keeping track of the schema of
+        // all the `when` expressions to inform how we algebrize the expr
         let mut when_branches_all_strings = true;
         let mut when_branch: Vec<mir::WhenBranch> = c
             .when_branch
