@@ -257,7 +257,6 @@ impl ExpressionContext {
     pub(crate) fn with_implicit_type_conversion_ctx(self, value: bool) -> Self {
         Self {
             in_implicit_type_conversion_ctx: value,
-            ..self
         }
     }
 }
@@ -283,6 +282,7 @@ impl<'a> Algebrizer<'a> {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn with_schema_env(
         current_db: &'a str,
         schema_env: SchemaEnvironment,
