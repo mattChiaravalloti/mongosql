@@ -530,7 +530,7 @@ impl<'a> Algebrizer<'a> {
         let expression_algebrizer = self
             .with_merged_mappings(source.schema(&self.schema_inference_state())?.schema_env)?
             // We should not algebrize the select values body exprs in an implicit type conversion
-            // context since there is no sepcific type expected for these values.
+            // context since there is no specific type expected for these values.
             .with_implicit_type_conversion_ctx(false);
 
         // We must check for duplicate Datasource Keys, which is an error. The datasources
@@ -713,7 +713,7 @@ impl<'a> Algebrizer<'a> {
             return Err(Error::ArrayDatasourceMustBeLiteral);
         }
         // We should not algebrize the array element exprs in an implicit type conversion context
-        // since there is no sepcific type expected for these values.
+        // since there is no specific type expected for these values.
         let element_algebrizer = self.with_implicit_type_conversion_ctx(false);
         let src = mir::Stage::Array(mir::ArraySource {
             array: ve
@@ -1290,7 +1290,7 @@ impl<'a> Algebrizer<'a> {
             .clone()
             .with_merged_mappings(source.schema(&self.schema_inference_state())?.schema_env)?
             // We should not algebrize the sort key exprs in an implicit type conversion
-            // context since there is no sepcific type expected for these values.
+            // context since there is no specific type expected for these values.
             .with_implicit_type_conversion_ctx(false);
         let ordered = match ast_node {
             None => source,
@@ -1349,7 +1349,7 @@ impl<'a> Algebrizer<'a> {
                         source.schema(&self.schema_inference_state())?.schema_env,
                     )?
                     // We should not algebrize the group key exprs in an implicit type conversion
-                    // context since there is no sepcific type expected for these values.
+                    // context since there is no specific type expected for these values.
                     .with_implicit_type_conversion_ctx(false);
 
                 let mut group_clause_aliases = UniqueLinkedHashMap::new();
@@ -1443,7 +1443,7 @@ impl<'a> Algebrizer<'a> {
     }
 
     /// Algebrizes an `ast::Expression` node into a `mir::Expression` node. Callers must ensure
-    /// that the `Algeberizer`'s `expression_context` is set correctly for the given context of the
+    /// that the `Algebrizer`'s `expression_context` is set correctly for the given context of the
     /// `ast_node` being algebrized.
     pub fn algebrize_expression(&self, ast_node: ast::Expression) -> Result<mir::Expression> {
         match ast_node {
@@ -1911,7 +1911,7 @@ impl<'a> Algebrizer<'a> {
 
         // First, we must determine if the left and right operands each need to
         // be algebrized in an implicit type conversion context (this is done
-        // by toggling the bool argument to aglebrize_expression). The different
+        // by toggling the bool argument to algebrize_expression). The different
         // cases are detailed below.
         let (mut left, mut right) = match b.op {
             // Add, And, Div, Mul, Or, and Sub do not expect String operands, therefore we algebrize
