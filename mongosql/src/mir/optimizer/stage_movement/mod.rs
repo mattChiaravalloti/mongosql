@@ -582,7 +582,12 @@ impl StageMovementVisitor<'_> {
             // Recall that the LHS (source) datasources are considered in-scope
             // inside the RHS (subquery) so this is safe.
             Stage::MqlIntrinsic(MqlStage::LateralJoin(ref n)) => {
-                let right_schema = n.subquery.schema(self.schema_state).unwrap();
+                let source_result_set = n.source.schema(self.schema_state).unwrap();
+                let state = self
+                    .schema_state
+                    .with_merged_schema_env(source_result_set.schema_env.clone());
+                let right_schema = n.subquery.schema(&state).unwrap();
+
                 // If this is a filter, we cannot move it, if the Join's JoinType is Left and any use is in the RHS.
                 // It is not semantically correct to merge WHERE conditions into lateral JOIN RHS clauses.
                 if (node.is_filter() && n.join_type == JoinType::Left) || node.is_sort() {
@@ -707,10 +712,15 @@ impl StageMovementVisitor<'_> {
                         (_, true) => {
                             side = BubbleUpSide::Right;
                         }
-                        // This case is when we have a TRUE or FALSE filter, we want this to bubble
-                        // up both sides.
+
+                        // While there may be a few cases in which we could bubble up both sides,
+                        // there are also cases where the data sources are masked behind
+                        // multiple joins with correlated conditions.
+                        //
+                        // So to avoid the ambiguity, we always short out here if
+                        // neither side has the data source.
                         (false, false) => {
-                            side = BubbleUpSide::Both;
+                            return (node, false);
                         }
                     }
                 }
