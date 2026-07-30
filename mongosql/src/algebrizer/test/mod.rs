@@ -14,19 +14,17 @@ use mongosql_datastructures::binding_tuple::Key;
 
 #[macro_export]
 macro_rules! test_algebrize {
-    ($func_name:ident, method = $method:ident, $(expression_context = $expression_context:expr,)? $(expected = $expected:expr,)? $(expected_pat = $expected_pat:pat,)? $(expected_error_code = $expected_error_code:literal,)? input = $ast:expr, $(source = $source:expr,)? $(env = $env:expr,)? $(catalog = $catalog:expr,)? $(variables = $variables:expr,)? $(schema_checking_mode = $schema_checking_mode:expr,)? $(is_add_fields = $is_add_fields:expr, )?) => {
+    ($func_name:ident, method = $method:ident, $(expression_context = $expression_context:expr,)? $(expected = $expected:expr,)? $(expected_pat = $expected_pat:pat,)? $(expected_error_code = $expected_error_code:literal,)? input = $ast:expr, $(source = $source:expr,)? $(env = $env:expr,)? $(catalog = $catalog:expr,)? $(schema_checking_mode = $schema_checking_mode:expr,)? $(is_add_fields = $is_add_fields:expr, )?) => {
         #[test]
         fn $func_name() {
             #[allow(unused_imports)]
             use $crate::{
-                algebrizer::{Algebrizer, ExpressionContext, HigherOrderFunctionCtx, Error, ClauseType},
+                algebrizer::{Algebrizer, ExpressionContext, Error, ClauseType},
                 algebrizer::errors::HigherOrderFunctionErrorCause,
                 catalog::Catalog,
                 SchemaCheckingMode,
                 schema::Schema,
             };
-
-            use std::collections::BTreeMap;
 
             #[allow(unused_mut, unused_assignments)]
             let mut catalog = Catalog::default();
@@ -36,13 +34,9 @@ macro_rules! test_algebrize {
             let mut schema_checking_mode = SchemaCheckingMode::Strict;
             $(schema_checking_mode = $schema_checking_mode;)?
 
-            #[allow(unused_mut, unused_assignments, unused_variables)]
-            let mut variables: BTreeMap<&'static str, Schema> = BTreeMap::new();
-            $(variables = $variables;)?
-
             #[allow(unused_mut, unused_assignments)]
             let mut algebrizer = Algebrizer::new("test".into(), &catalog, 0u16, schema_checking_mode, false, ClauseType::Unintialized);
-            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default(), variables);)?
+            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default());)?
             $(algebrizer = algebrizer.with_expression_context($expression_context);)?
 
             let res: Result<_, Error> = algebrizer.$method($ast $(, $source)? $(, $is_add_fields)?);
@@ -59,7 +53,7 @@ macro_rules! test_algebrize {
 
 #[macro_export]
 macro_rules! test_algebrize_expr_and_schema_check {
-    ($func_name:ident, method = $method:ident, $(expression_context = $expression_context:expr,)? $(expected = $expected:expr,)? $(expected_error_code = $expected_error_code:literal,)? input = $ast:expr, $(source = $source:expr,)? $(env = $env:expr,)? $(catalog = $catalog:expr,)? $(variables = $variables:expr,)? $(schema_checking_mode = $schema_checking_mode:expr,)?) => {
+    ($func_name:ident, method = $method:ident, $(expression_context = $expression_context:expr,)? $(expected = $expected:expr,)? $(expected_error_code = $expected_error_code:literal,)? input = $ast:expr, $(source = $source:expr,)? $(env = $env:expr,)? $(catalog = $catalog:expr,)? $(schema_checking_mode = $schema_checking_mode:expr,)?) => {
         #[test]
         fn $func_name() {
             #[allow(unused)]
@@ -72,8 +66,6 @@ macro_rules! test_algebrize_expr_and_schema_check {
                 schema::Schema,
             };
 
-            use std::collections::BTreeMap;
-
             #[allow(unused_mut, unused_assignments)]
             let mut catalog = Catalog::default();
             $(catalog = $catalog;)?
@@ -82,13 +74,9 @@ macro_rules! test_algebrize_expr_and_schema_check {
             let mut schema_checking_mode = SchemaCheckingMode::Strict;
             $(schema_checking_mode = $schema_checking_mode;)?
 
-            #[allow(unused_mut, unused_assignments, unused_variables)]
-            let mut variables: BTreeMap<&'static str, Schema> = BTreeMap::new();
-            $(variables = $variables;)?
-
             #[allow(unused_mut, unused_assignments)]
             let mut algebrizer = Algebrizer::new("test".into(), &catalog, 0u16, schema_checking_mode, false, ClauseType::Unintialized);
-            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default(), variables);)?
+            $(algebrizer = Algebrizer::with_schema_env("test".into(), $env, &catalog, 1u16, schema_checking_mode, false, ClauseType::Unintialized, ExpressionContext::default());)?
             $(algebrizer = algebrizer.with_expression_context($expression_context);)?
 
             let res: Result<_, Error> = algebrizer.$method($ast $(, $source)?);

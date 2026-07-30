@@ -551,10 +551,11 @@ test_algebrize!(
 );
 
 test_algebrize!(
-    unqualified_this_in_map_context_is_variable,
+    unqualified_this_with_this_in_context_is_variable,
     method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map),
+    expression_context = ExpressionContext::default().with_variables(&mut map! {
+        "this" => Schema::Atomic(Atomic::Integer),
+    }),
     expected = Ok(mir::Expression::Variable(mir::Variable {
         name: "this".into(),
         is_nullable: false,
@@ -570,63 +571,12 @@ test_algebrize!(
             ..Default::default()
         }),
     },
-    variables = map! {
-        "this" => Schema::Atomic(Atomic::Integer),
-    },
 );
 
 test_algebrize!(
-    unqualified_this_in_filter_context_is_variable,
+    unqualified_this_without_this_in_context_is_field,
     method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Filter),
-    expected = Ok(mir::Expression::Variable(mir::Variable {
-        name: "this".into(),
-        is_nullable: true,
-    })),
-    input = ast::Expression::Identifier("this".into()),
-    env = map! {
-        ("foo", 0u16).into() => Schema::Document(Document {
-            keys: map! {
-                "this".into() => Schema::Atomic(Atomic::Integer),
-            },
-            required: set! {"this".to_string()},
-            additional_properties: false,
-            ..Default::default()
-        }),
-    },
-);
-
-test_algebrize!(
-    unqualified_this_in_reduce_context_is_variable,
-    method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Reduce),
-    expected = Ok(mir::Expression::Variable(mir::Variable {
-        name: "this".into(),
-        is_nullable: false,
-    })),
-    input = ast::Expression::Identifier("this".into()),
-    env = map! {
-        ("foo", 0u16).into() => Schema::Document(Document {
-            keys: map! {
-                "this".into() => Schema::Atomic(Atomic::Integer),
-            },
-            required: set! {"this".to_string()},
-            additional_properties: false,
-            ..Default::default()
-        }),
-    },
-    variables = map! {
-        "this" => Schema::Atomic(Atomic::Integer),
-    },
-);
-
-test_algebrize!(
-    unqualified_this_is_field_when_no_hof_context,
-    method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::None),
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
         expr: Box::new(mir::Expression::Reference(("foo", 0u16).into())),
         field: "this".into(),
@@ -646,40 +596,14 @@ test_algebrize!(
 );
 
 test_algebrize!(
-    unqualified_value_in_map_context_is_error_when_no_field_with_that_name_exists,
+    unqualified_value_with_value_in_context_is_variable,
     method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Map),
-    expected = Err(Error::FieldNotFound(
-        "value".into(),
-        None,
-        ClauseType::Unintialized,
-        0u16,
-    )),
-    expected_error_code = 3008,
-    input = ast::Expression::Identifier("value".into()),
-);
-
-test_algebrize!(
-    unqualified_value_in_filter_context_is_error_when_no_field_with_that_name_exists,
-    method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Filter),
-    expected = Err(Error::FieldNotFound(
-        "value".into(),
-        None,
-        ClauseType::Unintialized,
-        0u16,
-    )),
-    expected_error_code = 3008,
-    input = ast::Expression::Identifier("value".into()),
-);
-
-test_algebrize!(
-    unqualified_value_in_reduce_context_is_variable,
-    method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::Reduce),
+    expression_context = ExpressionContext::default().with_variables(&mut map! {
+        "value" => Schema::AnyOf(set! {
+            Schema::Atomic(Atomic::Null),
+            Schema::Atomic(Atomic::Integer)
+        }),
+    }),
     expected = Ok(mir::Expression::Variable(mir::Variable {
         name: "value".into(),
         is_nullable: true,
@@ -695,16 +619,12 @@ test_algebrize!(
             ..Default::default()
         }),
     },
-    variables = map! {
-        "value" => Schema::AnyOf(set! {Schema::Atomic(Atomic::Null), Schema::Atomic(Atomic::Integer)}),
-    },
 );
 
 test_algebrize!(
-    unqualified_value_is_field_when_no_hof_context,
+    unqualified_value_wihtou_value_in_context_is_field,
     method = algebrize_expression,
-    expression_context = ExpressionContext::default()
-        .with_higher_order_function_arg_ctx(HigherOrderFunctionCtx::None),
+    expression_context = ExpressionContext::default(),
     expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
         expr: Box::new(mir::Expression::Reference(("foo", 1u16).into())),
         field: "value".into(),
