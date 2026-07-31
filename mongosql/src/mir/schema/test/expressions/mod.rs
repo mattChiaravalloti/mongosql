@@ -1,14 +1,13 @@
 mod aggregate; // mir::Aggregate
 mod case; // mir::Expression::{SearchedCase, SimpleCase}
-mod computed_field_acces;
+mod computed_field_acces; // mir::Expression::ComputedFieldAccess
 mod field_access; // mir::Expression::{FieldAccess, Reference (implicit)}
 mod higher_order_function; // mir::Expression::HigherOrderFunction
 mod like; // mir::Expression::Like
 mod literal; // mir::Expression::{Array, Document, Literal}
 mod scalar_function; // mir::Expression::ScalarFunction
 mod subquery; // mir::Expression::{Exists, Subquery, SubqueryComparison}
-mod type_expr;
-// mir::Expression::{Cast, TypeAssertion}
+mod type_expr; // mir::Expression::{Cast, TypeAssertion}
 
 mod mql_intrinsic {
     use crate::{
