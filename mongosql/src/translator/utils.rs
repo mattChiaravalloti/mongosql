@@ -332,10 +332,6 @@ impl From<mir::ScalarFunction> for ScalarFunctionType {
             And => ScalarFunctionType::Sql(SqlOperator::And),
             Or => ScalarFunctionType::Sql(SqlOperator::Or),
 
-            // Computed Field Access operator
-            // when the field is not known until runtime.
-            ComputedFieldAccess => ScalarFunctionType::Sql(SqlOperator::ComputedFieldAccess),
-
             // Conditional scalar functions
             NullIf => ScalarFunctionType::Sql(SqlOperator::NullIf),
             Coalesce => ScalarFunctionType::Sql(SqlOperator::Coalesce),

@@ -352,7 +352,6 @@ impl ScalarFunction {
             | ScalarFunction::Sub
             | ScalarFunction::Mul
             | ScalarFunction::Div
-            | ScalarFunction::ComputedFieldAccess
             | ScalarFunction::NullIf
             | ScalarFunction::Coalesce
             | ScalarFunction::Slice

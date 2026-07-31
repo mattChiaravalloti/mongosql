@@ -21,6 +21,9 @@ impl MqlTranslator {
             mir::Expression::Document(doc) => self.translate_document(doc.document),
             mir::Expression::Exists(exists) => self.translate_exists(exists),
             mir::Expression::FieldAccess(field_access) => self.translate_field_access(field_access),
+            mir::Expression::ComputedFieldAccess(computed_field_access) => {
+                self.translate_computed_field_access(computed_field_access)
+            }
             mir::Expression::Is(is) => self.translate_is(is),
             mir::Expression::Like(like_expr) => self.translate_like(like_expr),
             mir::Expression::Literal(lit) => self.translate_literal(lit),
@@ -263,37 +266,39 @@ impl MqlTranslator {
         let expr = self.translate_expression(*field_access.expr)?;
         let field = field_access.field;
         match expr {
-            air::Expression::FieldRef(ref r) => {
-                if !(field.contains('.') || field.starts_with('$') || field.as_str() == "") {
-                    Ok(air::Expression::FieldRef(air::FieldRef {
-                        parent: Some(Box::new(r.clone())),
-                        name: field,
-                    }))
-                } else {
-                    Ok(air::Expression::GetField(air::GetField {
-                        field,
-                        input: Box::new(expr),
-                    }))
-                }
+            air::Expression::FieldRef(ref r)
+                if !(field.contains('.') || field.starts_with('$') || field.as_str() == "") =>
+            {
+                Ok(air::Expression::FieldRef(air::FieldRef {
+                    parent: Some(Box::new(r.clone())),
+                    name: field,
+                }))
             }
-            air::Expression::Variable(ref v) => {
-                if !(field.contains('.') || field.starts_with('$') || field.as_str() == "") {
-                    Ok(air::Expression::Variable(air::Variable {
-                        parent: Some(Box::new(v.clone())),
-                        name: field,
-                    }))
-                } else {
-                    Ok(air::Expression::GetField(air::GetField {
-                        field,
-                        input: Box::new(expr),
-                    }))
-                }
+            air::Expression::Variable(ref v)
+                if !(field.contains('.') || field.starts_with('$') || field.as_str() == "") =>
+            {
+                Ok(air::Expression::Variable(air::Variable {
+                    parent: Some(Box::new(v.clone())),
+                    name: field,
+                }))
             }
             _ => Ok(air::Expression::GetField(air::GetField {
-                field,
+                field: Box::new(air::Expression::Literal(air::LiteralValue::String(field))),
                 input: Box::new(expr),
             })),
         }
+    }
+
+    fn translate_computed_field_access(
+        &self,
+        computed_field_access: mir::ComputedFieldAccess,
+    ) -> Result<air::Expression> {
+        let expr = self.translate_expression(*computed_field_access.expr)?;
+        let field = self.translate_expression(*computed_field_access.field)?;
+        Ok(air::Expression::GetField(air::GetField {
+            field: Box::new(field),
+            input: Box::new(expr),
+        }))
     }
 
     fn translate_is(&self, is_expr: mir::IsExpr) -> Result<air::Expression> {

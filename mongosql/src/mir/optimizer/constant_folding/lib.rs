@@ -593,20 +593,23 @@ impl ConstantFoldExprVisitor<'_> {
         }
     }
 
-    // Constant folds the computed field function
-    fn fold_computed_field_function(
-        &mut self,
-        left: Expression,
-        right: Expression,
-    ) -> Option<Expression> {
+    // Constant folds the computed field access expr
+    fn fold_computed_field_access_expr(&mut self, expr: ComputedFieldAccess) -> (Expression, bool) {
+        if self.has_null_arg(&[*expr.expr.clone(), *expr.field.clone()]) {
+            return (Expression::Literal(LiteralValue::Null), true);
+        }
         if let (
             Expression::Document(DocumentExpr { document, .. }),
             Expression::Literal(LiteralValue::String(field)),
-        ) = (&left, &right)
+        ) = (expr.expr.as_ref(), expr.field.as_ref())
         {
-            document.get(field).cloned()
+            let field_expr = document
+                .get(field)
+                .cloned()
+                .unwrap_or(Expression::Literal(LiteralValue::Null));
+            (field_expr, true)
         } else {
-            None
+            (Expression::ComputedFieldAccess(expr), false)
         }
     }
 
@@ -786,7 +789,6 @@ impl ConstantFoldExprVisitor<'_> {
             | ScalarFunction::Lt
             | ScalarFunction::Lte
             | ScalarFunction::Neq => self.fold_comparison_function(sf.function, left, right),
-            ScalarFunction::ComputedFieldAccess => self.fold_computed_field_function(left, right),
             ScalarFunction::BTrim | ScalarFunction::LTrim | ScalarFunction::RTrim => {
                 self.fold_trim_function(sf.function, left, right)
             }
@@ -1570,6 +1572,9 @@ impl Visitor for ConstantFoldExprVisitor<'_> {
             Expression::Document(_) => (e, false),
             Expression::Exists(_) => (e, false),
             Expression::FieldAccess(field_expr) => self.fold_field_access_expr(field_expr),
+            Expression::ComputedFieldAccess(computed_field_access) => {
+                self.fold_computed_field_access_expr(computed_field_access)
+            }
             Expression::Is(is_expr) => self.fold_is_expr(is_expr),
             Expression::Like(_) => (e, false),
             Expression::Literal(_) => (e, false),
@@ -1589,8 +1594,7 @@ impl Visitor for ConstantFoldExprVisitor<'_> {
                 | ScalarFunction::Neq
                 | ScalarFunction::BTrim
                 | ScalarFunction::LTrim
-                | ScalarFunction::RTrim
-                | ScalarFunction::ComputedFieldAccess => self.fold_binary_null_checked_function(f),
+                | ScalarFunction::RTrim => self.fold_binary_null_checked_function(f),
                 ScalarFunction::And | ScalarFunction::Or => self.fold_logical_function(f),
                 ScalarFunction::Between => self.fold_between(f),
                 ScalarFunction::Neg

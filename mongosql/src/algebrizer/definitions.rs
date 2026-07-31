@@ -2269,16 +2269,21 @@ impl<'a> Algebrizer<'a> {
         let expr = expr_algebrizer.algebrize_expression(*a.expr)?;
         Ok(match *a.subfield {
             ast::Expression::StringConstructor(s) => self.construct_field_access_expr(expr, s)?,
-            sf => mir::Expression::ScalarFunction(mir::ScalarFunctionApplication::new(
-                mir::ScalarFunction::ComputedFieldAccess,
-                vec![
-                    expr,
-                    // Since this expression is certainly not a StringConstructor, we can just use
-                    // `self` to algebrize it since the implicit type conversion context does not
-                    // matter.
-                    self.algebrize_expression(sf)?,
-                ],
-            )),
+            sf => mir::Expression::ComputedFieldAccess(mir::ComputedFieldAccess {
+                expr: Box::new(expr),
+                // Since this expression is certainly not a StringConstructor, we can just use
+                // `self` to algebrize it since the implicit type conversion context does not
+                // matter.
+                field: Box::new(self.algebrize_expression(sf)?),
+                // We cannot know reliably one way or another if the field access is nullable, so we
+                // conservatively say it is. This is because the name of the `field` itself is a
+                // computed expression that will not be known until runtime. It is possible for
+                // both `expr` and `field` to be non-nullable, but for `field` to evaluate at
+                // runtime to a value that does not exist in the document `expr` and therefore
+                // result in missing. It is also possible for `field` to evaluate to a value that
+                // exists in `expr` but is null.
+                is_nullable: true,
+            }),
         })
     }
 

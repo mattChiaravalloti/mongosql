@@ -1177,6 +1177,7 @@ impl Expression {
                 Expression::document_schema(state, document)
             }
             Expression::FieldAccess(fa) => fa.schema(state),
+            Expression::ComputedFieldAccess(cfa) => cfa.schema(state),
             Expression::DateFunction(d) => d.schema(state),
             Expression::ScalarFunction(f) => f.schema(state),
             Expression::Cast(c) => c.schema(state),
@@ -1284,6 +1285,27 @@ impl FieldAccess {
             }
         }
         Ok(Expression::get_field_schema(&accessee_schema, &self.field))
+    }
+}
+
+impl SqlFunction for ComputedFieldAccess {
+    fn as_str(&self) -> &'static str {
+        "ComputedFieldAccess"
+    }
+}
+
+impl ComputedFieldAccess {
+    pub fn schema(&self, state: &SchemaInferenceState) -> Result<Schema, Error> {
+        let expr_schema = self.expr.schema(state)?;
+        let field_schema = self.field.schema(state)?;
+
+        // Computed Field Access operator when the field is not known until runtime.
+        self.schema_check_fixed_args(
+            state,
+            &[(&self.expr, expr_schema), (&self.field, field_schema)],
+            &[ANY_DOCUMENT.clone(), Schema::Atomic(Atomic::String)],
+        )?;
+        Ok(Schema::Any)
     }
 }
 
@@ -1939,15 +1961,6 @@ impl ScalarFunction {
                     BOOLEAN_OR_NULLISH.clone(),
                     Schema::Atomic(Atomic::Boolean),
                 )
-            }
-            // Computed Field Access operator when the field is not known until runtime.
-            ComputedFieldAccess => {
-                self.schema_check_fixed_args(
-                    state,
-                    arg_schemas,
-                    &[ANY_DOCUMENT.clone(), Schema::Atomic(Atomic::String)],
-                )?;
-                Ok(Schema::Any)
             }
             // Conditional scalar functions.
             NullIf => {
