@@ -108,7 +108,10 @@ tests:
     should_compile: false
     algebrize_error: "schema checking failed for ComputedFieldAccess: required Atomic(String), found Atomic(Integer)"
 
+    # in mongodb 7.2.0, support for arbitrary expressions for the `field` in `$getField` was added. This test shows that
+    # this feature works for server versions exceeding that threshold.
   - description: Bracket notation CAST to STRING expression
+    min_server_version: "7.2"
     query: "SELECT VALUE {'_1': a[CAST(b AS STRING)]} FROM [{'a': {'c': 100}, 'b': 'c'}] AS arr"
     current_db: test
     result:
