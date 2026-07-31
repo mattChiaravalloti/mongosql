@@ -123,7 +123,6 @@ pub fn sql_op_to_mql_op(sql_op: SqlOperator) -> Option<MqlOperator> {
         SqlOperator::Between
         | SqlOperator::BitLength
         | SqlOperator::Coalesce
-        | SqlOperator::ComputedFieldAccess
         | SqlOperator::CurrentTimestamp
         | SqlOperator::Neg
         | SqlOperator::Pos => return None,

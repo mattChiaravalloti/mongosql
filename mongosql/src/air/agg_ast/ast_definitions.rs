@@ -443,7 +443,7 @@ impl From<TaggedOperator> for air::Expression {
     fn from(ast_op: TaggedOperator) -> Self {
         match ast_op {
             TaggedOperator::GetField(gf) => air::Expression::GetField(air::GetField {
-                field: gf.field,
+                field: air::Expression::Literal(air::LiteralValue::String(gf.field.clone())).into(),
                 input: gf.input.into(),
             }),
             TaggedOperator::SetField(sf) => air::Expression::SetField(air::SetField {

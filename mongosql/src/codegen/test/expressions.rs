@@ -1077,10 +1077,7 @@ mod mql_semantic_operator {
 }
 
 mod sql_semantic_operator {
-    use crate::{
-        air::{self, Expression::*, LiteralValue::*, SqlOperator::*, SqlSemanticOperator},
-        codegen::Error,
-    };
+    use crate::air::{self, Expression::*, LiteralValue::*, SqlOperator::*, SqlSemanticOperator};
     use bson::bson;
 
     test_codegen_expression!(
@@ -1392,14 +1389,6 @@ mod sql_semantic_operator {
             args: vec![],
         })
     );
-    test_codegen_expression!(
-        computed_field_access,
-        expected = Err(Error::UnsupportedOperator(ComputedFieldAccess)),
-        input = SqlSemanticOperator(SqlSemanticOperator {
-            op: ComputedFieldAccess,
-            args: vec![]
-        })
-    );
 
     test_codegen_expression!(
         in_op,
@@ -1604,18 +1593,18 @@ mod get_field {
     use crate::{
         air::{
             self,
-            Expression::{Document, GetField, Literal},
-            LiteralValue,
+            Expression::{Document, FieldRef, GetField, Literal, MqlSemanticOperator},
+            LiteralValue, MqlOperator,
         },
         unchecked_unique_linked_hash_map,
     };
     use bson::bson;
 
     test_codegen_expression!(
-        basic,
+        basic_string_literal,
         expected = Ok(bson!({"$getField": {"field": "x", "input": {"x": {"$literal": 42}}}})),
         input = GetField(air::GetField {
-            field: "x".to_string(),
+            field: Literal(LiteralValue::String("x".to_string())).into(),
             input: Document(unchecked_unique_linked_hash_map! {
                 "x".to_string() => Literal(LiteralValue::Integer(42)),
             })
@@ -1624,12 +1613,33 @@ mod get_field {
     );
 
     test_codegen_expression!(
-        with_dollar_sign,
+        string_literal_with_dollar_sign,
         expected = Ok(
             bson!({"$getField": {"field": { "$literal": "$x"}, "input": {"$x": {"$literal": 42}}}})
         ),
         input = GetField(air::GetField {
-            field: "$x".to_string(),
+            field: Literal(LiteralValue::String("$x".to_string())).into(),
+            input: Document(unchecked_unique_linked_hash_map! {
+                "$x".to_string() => Literal(LiteralValue::Integer(42)),
+            })
+            .into(),
+        })
+    );
+
+    test_codegen_expression!(
+        complex_field_expr,
+        expected = Ok(
+            bson!({"$getField": {"field": { "$concat": ["$a", "$b"]}, "input": {"$x": {"$literal": 42}}}})
+        ),
+        input = GetField(air::GetField {
+            field: MqlSemanticOperator(air::MqlSemanticOperator {
+                op: MqlOperator::Concat,
+                args: vec![
+                    FieldRef("a".to_string().into()),
+                    FieldRef("b".to_string().into())
+                ],
+            })
+            .into(),
             input: Document(unchecked_unique_linked_hash_map! {
                 "$x".to_string() => Literal(LiteralValue::Integer(42)),
             })

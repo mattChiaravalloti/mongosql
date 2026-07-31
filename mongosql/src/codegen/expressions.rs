@@ -1,6 +1,6 @@
 use crate::{
     air::{self, SqlOperator, TrimOperator},
-    codegen::{Error, MqlCodeGenerator, Result},
+    codegen::{MqlCodeGenerator, Result},
 };
 use bson::{bson, doc, Bson};
 use mongosql_datastructures::unique_linked_hash_map::UniqueLinkedHashMap;
@@ -137,10 +137,6 @@ impl MqlCodeGenerator {
                     .collect::<Result<Vec<_>>>()?;
                 bson::bson!({ Self::to_sql_op(sql_op.op).unwrap(): Bson::Array(ops) })
             }
-            SqlOperator::ComputedFieldAccess => {
-                // Adding this feature is tracked in SQL-673
-                return Err(Error::UnsupportedOperator(SqlOperator::ComputedFieldAccess));
-            }
             SqlOperator::CurrentTimestamp => Bson::String("$$NOW".to_string()),
         })
     }
@@ -185,9 +181,15 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_get_field(&self, gf: air::GetField) -> Result<Bson> {
+        let input = self.codegen_expression(*gf.input)?;
+        let field = match *gf.field {
+            air::Expression::Literal(air::LiteralValue::String(s)) => {
+                Self::wrap_in_literal_if(s.clone(), |s| s.starts_with('$'))
+            }
+            _ => self.codegen_expression(*gf.field)?,
+        };
+
         Ok({
-            let input = self.codegen_expression(*gf.input)?;
-            let field = Self::wrap_in_literal_if(gf.field, |s| s.starts_with('$'));
             bson!({
                 "$getField": {
                     "field": field,
