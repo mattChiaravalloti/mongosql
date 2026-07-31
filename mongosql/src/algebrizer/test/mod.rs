@@ -20,8 +20,10 @@ macro_rules! test_algebrize {
             #[allow(unused_imports)]
             use $crate::{
                 algebrizer::{Algebrizer, ExpressionContext, Error, ClauseType},
+                algebrizer::errors::HigherOrderFunctionErrorCause,
                 catalog::Catalog,
                 SchemaCheckingMode,
+                schema::Schema,
             };
 
             #[allow(unused_mut, unused_assignments)]
@@ -57,9 +59,11 @@ macro_rules! test_algebrize_expr_and_schema_check {
             #[allow(unused)]
             use $crate::{
                 algebrizer::{Algebrizer, ExpressionContext, Error, ClauseType},
+                algebrizer::errors::HigherOrderFunctionErrorCause,
                 catalog::Catalog,
                 SchemaCheckingMode,
                 mir::schema::CachedSchema,
+                schema::Schema,
             };
 
             #[allow(unused_mut, unused_assignments)]

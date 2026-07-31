@@ -1,13 +1,14 @@
 use crate::mir::ArrayExpr;
+use crate::schema::Schema;
 use crate::{
-    algebrizer::errors::Error,
+    algebrizer::errors::{Error, HigherOrderFunctionErrorCause},
     ast::{self, pretty_print::PrettyPrint},
     catalog::Catalog,
     map,
     mir::{
         self,
         binding_tuple::{BindingTuple, DatasourceName, Key},
-        schema::{CachedSchema, SchemaCache, SchemaInferenceState},
+        schema::{CachedSchema, SchemaCache, SchemaInferenceState, THIS_VARIABLE, VALUE_VARIABLE},
         AliasedExpr, Expression, FieldAccess, OptionallyAliasedExpr, ReferenceExpr,
     },
     schema::{
@@ -17,7 +18,11 @@ use crate::{
     util::unique_linked_hash_map::UniqueLinkedHashMap,
     SchemaCheckingMode,
 };
-use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -243,7 +248,7 @@ pub struct Algebrizer<'a> {
 /// ExpressionContext contains information about the context in which an expression is being
 /// algebrized. In certain contexts, certain ast::Expressions are resolved differently. See fields
 /// for more information.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct ExpressionContext {
     // Indicates if the expression is being algebrized in an implicit type conversion context.
     // An expression is "in an implicit type conversion context" whenever it appears in a place
@@ -251,13 +256,41 @@ pub(crate) struct ExpressionContext {
     // unexpected to be strings. MongoSQL supports implicit type conversion from extended-JSON
     // encoded string literals to the corresponding BSON type in these contexts.
     in_implicit_type_conversion_ctx: bool,
+
+    // Tracks the variables available within the context of the expression being algebrized. An
+    // expression inherits its parent's variables. An expression may introduce new variables.
+    //
+    // Inherently, if an unqualified identifier is present in an ExpressionContext's variables
+    // mapping, it is assumed to be a variable. For example, in the expression MAP(array, this + 1),
+    // when algebrizing the function-argument `this + 1` we add the variable key "this" to this map.
+    //
+    // In the context of higher order functions, certain unqualified identifiers are resolved to
+    // variables instead of field references. Specifically, in Map and Filter contexts, unqualified
+    // identifiers with the value "this" are resolved to the variable `this`; in the Reduce context,
+    // unqualified identifiers with the value "this" or "value" are resolved to the variables `this`
+    // or `value`, respectively. It is possibly for higher order functions to be nested within each
+    // other. If they are nested, the innermost function's variables shadow the outer functions'
+    // variables, if they redefine those variables. For example, Filter does not redefine `value`,
+    // so if a Filter is nested in a Reduce, the `value` variable is still available in the context
+    // of the Filter and uses the inherited schema from the Reduce.
+    variables: BTreeMap<&'static str, schema::Schema>,
 }
 
 impl ExpressionContext {
     pub(crate) fn with_implicit_type_conversion_ctx(self, value: bool) -> Self {
         Self {
             in_implicit_type_conversion_ctx: value,
+            ..self
         }
+    }
+
+    pub(crate) fn with_variables(
+        self,
+        new_variables: &mut BTreeMap<&'static str, schema::Schema>,
+    ) -> Self {
+        let mut variables = self.variables.clone();
+        variables.append(new_variables);
+        Self { variables, ..self }
     }
 }
 
@@ -311,7 +344,7 @@ impl<'a> Algebrizer<'a> {
             catalog: self.catalog,
             scope_level: self.scope_level,
             schema_checking_mode: self.schema_checking_mode,
-            variables: map! {},
+            variables: self.expression_context.variables.clone(),
         }
     }
 
@@ -327,7 +360,7 @@ impl<'a> Algebrizer<'a> {
             // parent. It probably does not matter, but we do not want subqueries to modify parent
             // state.
             clause_type: RefCell::new(*self.clause_type.borrow()),
-            expression_context: self.expression_context,
+            expression_context: self.expression_context.clone(),
         }
     }
 
@@ -347,8 +380,25 @@ impl<'a> Algebrizer<'a> {
     fn with_implicit_type_conversion_ctx(&self, value: bool) -> Self {
         self.with_expression_context(
             self.expression_context
+                .clone()
                 .with_implicit_type_conversion_ctx(value),
         )
+    }
+
+    fn with_variables(&self, variables: &mut BTreeMap<&'static str, schema::Schema>) -> Self {
+        self.with_expression_context(self.expression_context.clone().with_variables(variables))
+    }
+
+    /// Returns whether a variable is present in the ExpressionContext's variables map, and, if so,
+    /// if that variable is nullable.
+    fn contains_variable(&self, variable: &'static str) -> (bool, bool) {
+        let var_schema = self.expression_context.variables.get(variable);
+
+        if let Some(schema) = var_schema {
+            (true, schema.satisfies(&NULLISH) != Satisfaction::Not)
+        } else {
+            (false, false)
+        }
     }
 
     fn args_are_nullable(args: &[mir::Expression]) -> bool {
@@ -401,6 +451,7 @@ impl<'a> Algebrizer<'a> {
         Ok(Self {
             schema_env: Rc::new(merged_env),
             clause_type: RefCell::new(*self.clause_type.borrow()),
+            expression_context: self.expression_context.clone(),
             ..*self
         })
     }
@@ -1018,7 +1069,7 @@ impl<'a> Algebrizer<'a> {
             self.schema_checking_mode,
             self.allow_order_by_missing_columns,
             *self.clause_type.borrow(),
-            self.expression_context,
+            self.expression_context.clone(),
         );
 
         let path = match path {
@@ -1488,7 +1539,7 @@ impl<'a> Algebrizer<'a> {
             ast::Expression::Subquery(s) => self.algebrize_subquery(*s),
             ast::Expression::SubqueryComparison(s) => self.algebrize_subquery_comparison(s),
             ast::Expression::Exists(e) => self.algebrize_exists(*e),
-            ast::Expression::HigherOrderFunction(_) => unimplemented!("SQL-3293"),
+            ast::Expression::HigherOrderFunction(h) => self.algebrize_higher_order_function(h),
         }
     }
 
@@ -2526,6 +2577,30 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_unqualified_identifier(&self, i: String) -> Result<mir::Expression> {
+        // If we are in the context of a Higher Order Function, unqualified identifiers may be
+        // variables instead of fields. If the identifier is present in the ExpressionContext's
+        // variables map, then we return a Variable expression. For now, we only support "this" and
+        // "value" as variables. For the sake of minor memory efficiency, we store variables as
+        // &'static str keys in the variables map. Since `i` is a `String`, we compare it to const
+        // values to do the lookup. Eventually, if we ever support user-provided variable names, we
+        // will update the variables mapping to use String keys and can do the lookup directly.
+        let var_lookup_name = if i == THIS_VARIABLE {
+            Some(THIS_VARIABLE)
+        } else if i == VALUE_VARIABLE {
+            Some(VALUE_VARIABLE)
+        } else {
+            None
+        };
+        if let Some(var_lookup_name) = var_lookup_name {
+            let (is_variable, is_nullable) = self.contains_variable(var_lookup_name);
+            if is_variable {
+                return Ok(mir::Expression::Variable(mir::Variable {
+                    name: i,
+                    is_nullable,
+                }));
+            }
+        }
+
         // Attempt to find a datasource for this unqualified reference
         // at _any_ scope level.
         // If we find exactly one datasource that May or Must contain
@@ -2669,6 +2744,222 @@ impl<'a> Algebrizer<'a> {
             }
             // Otherwise, check the next highest scope.
             current_scope -= 1;
+        }
+    }
+
+    fn algebrize_higher_order_function(
+        &self,
+        expr: ast::HigherOrderFunctionExpr,
+    ) -> Result<mir::Expression> {
+        // In general, we do not want to aglebrize higher order functions in an implicit type
+        // conversion context. We will not attempt to convert strings that represent arrays into
+        // actual arrays, as that may result in inadvertantly converting string _elements_ of arrays
+        // into their underlying types, which is unintended.
+        let expr_algebrizer = self.with_implicit_type_conversion_ctx(false);
+        match expr {
+            ast::HigherOrderFunctionExpr::Map(expr) => expr_algebrizer.algebrize_map(expr),
+            ast::HigherOrderFunctionExpr::Filter(expr) => {
+                expr_algebrizer.algebrize_filter_expr(expr)
+            }
+            ast::HigherOrderFunctionExpr::Reduce(expr) => expr_algebrizer.algebrize_reduce(expr),
+        }
+    }
+
+    /// Common algebrization for Map and Filter. Reduce requires some extra steps, such as initial
+    /// value algebrization and potential function argument re-algebrization. Given that, Reduce
+    /// does not use this method.
+    fn algebrize_hof_common(
+        &self,
+        name: &'static str,
+        array: ast::Expression,
+        f: ast::FunctionArgument,
+    ) -> Result<(mir::Expression, mir::Expression, bool)> {
+        let array = self.algebrize_expression(array).map_err(|e| {
+            Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::ArrayArg)
+        })?;
+
+        // Determine the schema of the `this` variable in the function argument. This is used to
+        // determine the `is_nullable` value for any `this` Variable expressions in the function
+        // argument.
+        let this_schema = array
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    name,
+                    e.into(),
+                    HigherOrderFunctionErrorCause::ArrayArg,
+                )
+            })?
+            .get_array_item_schema()
+            .unwrap_or(Schema::Any);
+
+        let fn_algebrizer = self.with_variables(&mut map! { THIS_VARIABLE => this_schema });
+        let f = fn_algebrizer.algebrize_hof_function_argument(name, f)?;
+
+        // Nullability is based only on the array argument. The function argument being nullable
+        // does not affect the nullability of the HOF expression, just the nullability of the
+        // elements of the output array.
+        let is_nullable = Self::args_are_nullable(std::slice::from_ref(&array));
+
+        Ok((array, f, is_nullable))
+    }
+
+    fn algebrize_hof_function_argument(
+        &self,
+        name: &'static str,
+        f: ast::FunctionArgument,
+    ) -> Result<mir::Expression> {
+        match f {
+            ast::FunctionArgument::Expr(e) => self.algebrize_expression(e).map_err(|e| {
+                Self::wrap_error_in_hof_context(name, e, HigherOrderFunctionErrorCause::FunctionArg)
+            }),
+            ast::FunctionArgument::NamedFunction(f) => {
+                unreachable!("{:?} should have been rewritten in {name}", f)
+            }
+        }
+    }
+
+    fn algebrize_map(&self, expr: ast::MapExpr) -> Result<mir::Expression> {
+        let (array, f, is_nullable) = self.algebrize_hof_common("Map", *expr.array, *expr.f)?;
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Map(mir::MapExpr {
+                array: Box::new(array),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
+    }
+
+    fn algebrize_filter_expr(&self, expr: ast::FilterExpr) -> Result<mir::Expression> {
+        let (array, f, is_nullable) = self.algebrize_hof_common("Filter", *expr.array, *expr.f)?;
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Filter(mir::FilterExpr {
+                array: Box::new(array),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
+    }
+
+    fn algebrize_reduce(&self, expr: ast::ReduceExpr) -> Result<mir::Expression> {
+        // First, algebrize the array.
+        let array = self.algebrize_expression(*expr.array).map_err(|e| {
+            Self::wrap_error_in_hof_context("Reduce", e, HigherOrderFunctionErrorCause::ArrayArg)
+        })?;
+
+        // Determine the schema of that `this` variable in the function argument. This is used to
+        // determine the `is_nullable` value for any `this` Variable expressions in the function
+        // argument.
+        let this_schema = array
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::ArrayArg,
+                )
+            })?
+            .get_array_item_schema()
+            .unwrap_or(Schema::Any);
+
+        // Next, algebrize the initial value.
+        let init_value = self.algebrize_expression(*expr.init_value).map_err(|e| {
+            Self::wrap_error_in_hof_context(
+                "Reduce",
+                e,
+                HigherOrderFunctionErrorCause::InitialValue,
+            )
+        })?;
+
+        // Determine the initial schema of the `value` variable in the function argument. This is
+        // used to determine the `is_nullable` value for any `value` Variable expressions in the
+        // function argument. We may need to update those variables later. See the comments below.
+        let init_value_schema = init_value
+            .schema(&self.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::InitialValue,
+                )
+            })?;
+
+        // Create an Algebrizer with the appropriate state for algebrizing the function argument.
+        let mut variables: BTreeMap<&'static str, schema::Schema> = map! {
+            THIS_VARIABLE => this_schema.clone(),
+            VALUE_VARIABLE => init_value_schema.clone()
+        };
+        let mut fn_algebrizer = self.with_variables(&mut variables);
+
+        // Finally, algebrize the function argument.
+        let mut f = fn_algebrizer.algebrize_hof_function_argument("Reduce", *expr.f.clone())?;
+
+        // Now that we've algebrized the function argument, we may need to update the nullability of
+        // any `value` Variable expressions in the function argument. This is because `value` only
+        // uses the `init_value` schema initially, and then takes on the `f` schema. The following
+        // truth table indicates the nullability of `value` variables:
+        //
+        //   init_value_schema    |    f_schema  |  value var is_nullable
+        //   ---------------------+--------------+------------------------
+        //    nullable            | nullable     | true
+        //    nullable            | not nullable | true
+        //    not nullable        | nullable     | true
+        //    not nullable        | not nullable | false
+        //
+        // That is, if either the `init_value` schema or the `f` schema is nullable, all `value`
+        // Variable expressions in the function argument are nullable. We only need to re-algebrize
+        // if the `init_value` schema is not nullable and the `f` schema is nullable.
+        let f_value_schema = f
+            .schema(&fn_algebrizer.schema_inference_state())
+            .map_err(|e| {
+                Self::wrap_error_in_hof_context(
+                    "Reduce",
+                    e.into(),
+                    HigherOrderFunctionErrorCause::FunctionArg,
+                )
+            })?;
+
+        if init_value_schema.satisfies(&NULLISH) == Satisfaction::Not
+            && f_value_schema.satisfies(&NULLISH) != Satisfaction::Not
+        {
+            // Overwrite the `value` variable schema with the `f` schema.
+            let mut variables: BTreeMap<&'static str, schema::Schema> = map! {
+                THIS_VARIABLE => this_schema.clone(),
+                VALUE_VARIABLE => f_value_schema.clone()
+            };
+
+            // Update the function algebrizer with the updated variables.
+            fn_algebrizer = fn_algebrizer.with_variables(&mut variables);
+
+            // Re-algebrize the function argument.
+            f = fn_algebrizer.algebrize_hof_function_argument("Reduce", *expr.f)?;
+        }
+
+        // Nullability is based on all arguments. If any of them are nullable, the Reduce expression
+        // is nullable.
+        let is_nullable = Self::args_are_nullable(&[array.clone(), init_value.clone(), f.clone()]);
+
+        Ok(mir::Expression::HigherOrderFunction(
+            mir::HigherOrderFunctionApplication::Reduce(mir::ReduceExpr {
+                array: Box::new(array),
+                init_value: Box::new(init_value),
+                f: Box::new(f),
+                is_nullable,
+            }),
+        ))
+    }
+
+    fn wrap_error_in_hof_context(
+        name: &'static str,
+        error: Error,
+        cause: HigherOrderFunctionErrorCause,
+    ) -> Error {
+        Error::HigherOrderFunctionWrapper {
+            name,
+            cause,
+            error: Box::new(error),
         }
     }
 }

@@ -2,7 +2,7 @@ use super::catalog;
 use crate::{
     ast, map, mir,
     mir::schema::SchemaCache,
-    schema::{Atomic, Document, Schema},
+    schema::{Atomic, Document},
     set, unchecked_unique_linked_hash_map,
 };
 

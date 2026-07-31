@@ -42,6 +42,11 @@ pub enum Error {
     InvalidUnwindPath,
     InvalidCast(ast::Type),
     InvalidSortKey(mir::Expression),
+    HigherOrderFunctionWrapper {
+        name: &'static str,
+        cause: HigherOrderFunctionErrorCause,
+        error: Box<Error>,
+    },
 }
 
 impl From<mir::schema::Error> for Error {
@@ -56,6 +61,13 @@ impl From<mir::Error> for Error {
             mir::Error::InvalidType(t) => Error::InvalidCast(t),
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum HigherOrderFunctionErrorCause {
+    ArrayArg,
+    InitialValue,
+    FunctionArg,
 }
 
 impl UserError for Error {
@@ -86,6 +98,7 @@ impl UserError for Error {
             Error::InvalidUnwindPath => 3029,
             Error::InvalidCast(_) => 3030,
             Error::InvalidSortKey(_) => 3034,
+            Error::HigherOrderFunctionWrapper { .. } => 3035,
         }
     }
 
@@ -166,6 +179,17 @@ impl UserError for Error {
             Error::InvalidSortKey(_) => {
                 Some("expressions are not allowed in sort key field paths".to_string())
             }
+            Error::HigherOrderFunctionWrapper { name, cause, error } => {
+                let (cause_desc, cause_message) = match cause {
+                    HigherOrderFunctionErrorCause::ArrayArg => ("array", "The first argument must be semantically valid, and must evaluate to either an Array, Null, or Missing."),
+                    HigherOrderFunctionErrorCause::InitialValue => ("initial value", "The second argument, the initial value, must be semantically valid but was not."),
+                    HigherOrderFunctionErrorCause::FunctionArg => ("function", "Ensure the function argument is semantically valid. It must have the correct number of arguments and the arguments must have the correct type."),
+                };
+                let sub_error_message = error
+                    .user_message()
+                    .unwrap_or_else(|| error.technical_message());
+                Some(format!("Invalid {cause_desc} argument for `{name}`: {cause_message} Sub-Error Code {}: {}", error.code(), sub_error_message))
+            }
         }
     }
 
@@ -199,6 +223,9 @@ impl UserError for Error {
             Error::InvalidCast(ast_type) => format!("invalid CAST target type '{ast_type:?}'"),
             Error::InvalidSortKey(e) =>
                 format!("sort key field path must be a pure field path with no expressions in this context. found {e:?}"),
+            Error::HigherOrderFunctionWrapper { name, cause, error } => {
+                format!("`{name}` with cause {cause:?}: sub-error: {}", error.technical_message())
+            },
         }
     }
 }

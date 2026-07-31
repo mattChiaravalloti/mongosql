@@ -549,3 +549,96 @@ test_algebrize!(
     expected_error_code = 3008,
     input = ast::Expression::Identifier("bar".into()),
 );
+
+test_algebrize!(
+    unqualified_this_with_this_in_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default().with_variables(&mut map! {
+        "this" => Schema::Atomic(Atomic::Integer),
+    }),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "this".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document(Document {
+            keys: map! {
+                "this".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_this_without_this_in_context_is_field,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default(),
+    expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
+        expr: Box::new(mir::Expression::Reference(("foo", 0u16).into())),
+        field: "this".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("this".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document(Document {
+            keys: map! {
+                "this".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"this".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_value_with_value_in_context_is_variable,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default().with_variables(&mut map! {
+        "value" => Schema::AnyOf(set! {
+            Schema::Atomic(Atomic::Null),
+            Schema::Atomic(Atomic::Integer)
+        }),
+    }),
+    expected = Ok(mir::Expression::Variable(mir::Variable {
+        name: "value".into(),
+        is_nullable: true,
+    })),
+    input = ast::Expression::Identifier("value".into()),
+    env = map! {
+        ("foo", 0u16).into() => Schema::Document(Document {
+            keys: map! {
+                "value".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"value".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
+
+test_algebrize!(
+    unqualified_value_wihtou_value_in_context_is_field,
+    method = algebrize_expression,
+    expression_context = ExpressionContext::default(),
+    expected = Ok(mir::Expression::FieldAccess(mir::FieldAccess {
+        expr: Box::new(mir::Expression::Reference(("foo", 1u16).into())),
+        field: "value".into(),
+        is_nullable: false,
+    })),
+    input = ast::Expression::Identifier("value".into()),
+    env = map! {
+        ("foo", 1u16).into() => Schema::Document(Document {
+            keys: map! {
+                "value".into() => Schema::Atomic(Atomic::Integer),
+            },
+            required: set! {"value".to_string()},
+            additional_properties: false,
+            ..Default::default()
+        }),
+    },
+);
