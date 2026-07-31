@@ -109,8 +109,7 @@ tests:
     algebrize_error: "schema checking failed for ComputedFieldAccess: required Atomic(String), found Atomic(Integer)"
 
   - description: Bracket notation CAST to STRING expression
-    query: "SELECT {'_1': a[CAST(b AS STRING)]} FROM [{'a': {'c': 100}, 'b': 'c'}] AS arr"
-    skip_reason: 'SQL-673: add codegen support for ComputedFieldAccess'
+    query: "SELECT VALUE {'_1': a[CAST(b AS STRING)]} FROM [{'a': {'c': 100}, 'b': 'c'}] AS arr"
     current_db: test
     result:
       - {'': {'_1': 100}}
