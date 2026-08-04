@@ -36,7 +36,7 @@ const MIN_F64_AS_STR: &str = "-1797693134862315700000000000000000000000000000000
 
 impl ConstantFoldExprVisitor<'_> {
     // Checks if a vector of expressions contains a null or missing expression
-    fn has_null_arg(&self, args: &[Expression]) -> bool {
+    fn has_null_arg<'a>(&self, args: impl IntoIterator<Item = &'a Expression>) -> bool {
         for expr in args {
             match expr.schema(self.state) {
                 Err(_) => return false,
@@ -595,7 +595,7 @@ impl ConstantFoldExprVisitor<'_> {
 
     // Constant folds the computed field access expr
     fn fold_computed_field_access_expr(&mut self, expr: ComputedFieldAccess) -> (Expression, bool) {
-        if self.has_null_arg(&[*expr.expr.clone(), *expr.field.clone()]) {
+        if self.has_null_arg([expr.expr.as_ref(), expr.field.as_ref()]) {
             return (Expression::Literal(LiteralValue::Null), true);
         }
         if let (
