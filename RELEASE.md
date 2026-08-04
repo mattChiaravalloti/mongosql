@@ -20,8 +20,8 @@ All projects/crates in this repository use [Semantic Versioning](https://semver.
 Tags are prepended with `libv` for `libmongosqltranslate` releases.
 
 ```sh
-# git tag -am libv1.0.0-<prerelease>-<prerelease-version> libv1.0.0-<prerelease>-<prerelease-version>
-git tag -am libv1.0.0-alpha-1 libv1.0.0-alpha-1
+# git tag -sam libv1.0.0-<prerelease>-<prerelease-version> libv1.0.0-<prerelease>-<prerelease-version>
+git tag -sam libv1.0.0-alpha-1 libv1.0.0-alpha-1
 ```
 
 ### Versioning `libmongosql`
@@ -36,7 +36,7 @@ At the moment, there are no pre-release (alpha, beta, rc, etc.) versions of `lib
 Tags are prepended with `v` for `libmongosql` releases.
 
 ```sh
-git tag -am v1.6.1 v1.6.1
+git tag -sam v1.6.1 v1.6.1
 ```
 
 ### Versioning `schema-builder-library`
@@ -83,22 +83,22 @@ Close the release on JIRA, adding the current date (you may need to ask the SQL 
 
 #### Ensure Evergreen Passing
 
-Ensure that the build you are releasing is passing the tests on the [mongosql waterfall](https://spruce.mongodb.com/commits/mongosql).
+Ensure that the build you are releasing is passing the tests on the [mongosql waterfall](https://spruce.corp.mongodb.com/project/mongosql/waterfall).
 
 #### Ensure master up to date
 
-Ensure you have the `main` branch checked out, and that you have pulled the latest commit from `mongodb/mongosql-rs`.
+Ensure you have the `main` branch checked out, and that you have pulled the latest commit from `mongodb/mongosql`.
 
 #### Create the tag and push
 
 Create an annotated tag and push it:
 
 ```sh
-git tag -a -m <major>.<minor>.<patch> <project-prefix><major>.<minor>.<patch>
+git tag -s -a -m <major>.<minor>.<patch> <project-prefix><major>.<minor>.<patch>
 git push --tags
 ```
 
-This should trigger an Evergreen run that can be viewed on the [mongosql-rs waterfall](https://spruce.mongodb.com/waterfall/mongosql-rs).
+This should trigger an Evergreen run that can be viewed on the [mongosql waterfall](https://spruce.corp.mongodb.com/project/mongosql/waterfall).
 The description for the tag triggered release starts with "Triggered From Git Tag 'vX.Y.Z"
 If it does not, you may have to ask the project manager to give you the right permissions to do so.
 Make sure to run the 'release' task, if it is not run automatically.
@@ -176,8 +176,8 @@ To monitor the status of ADF releases, check the #mongohouse-releases channel.
 
 #### Announce Release on Slack
 
-Use the following messsage template to announce the release in the #atlas-sql channel:
+Use the following messsage template to announce the release in the #sql-interface channel:
 
-> Hello! We've released mongosql-rs version \<VERSION\>
+> Hello! We've released mongosql version \<VERSION\>
 > More information, including release notes, can be found on the Release Ticket: \<JIRA Link\>
 > Please note that the release roll-out in Atlas is a separate process and it can take up to 2 weeks before the next release is available.
