@@ -184,6 +184,11 @@ impl MqlCodeGenerator {
         let input = self.codegen_expression(*gf.input)?;
         let field = match *gf.field {
             air::Expression::Literal(air::LiteralValue::String(s)) => {
+                // Recall that in aggregation, a string literal that begins with '$' is a field
+                // reference. For example, `"$foo"` is a reference to the field "foo" in the input
+                // document, not a string literal with the value "$foo". `Self::wrap_in_literal_if`
+                // will wrap `s` in `$literal` if it starts with '$', which will result in it being
+                // evaluated as the string literal "$foo".
                 Self::wrap_in_literal_if(s, |s| s.starts_with('$'))
             }
             _ => self.codegen_expression(*gf.field)?,
@@ -200,6 +205,11 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_set_field(&self, sf: air::SetField) -> Result<Bson> {
+        // Recall that in aggregation, a string literal that begins with '$' is a field reference.
+        // For example, `"$foo"` is a reference to the field "foo" in the input document, not a
+        // string literal with the value "$foo". `Self::wrap_in_literal_if` will wrap `s` in
+        // `$literal` if it starts with '$', which will result in it being evaluated as the string
+        // literal "$foo".
         let field = Self::wrap_in_literal_if(sf.field, |s| s.starts_with('$'));
         let input = self.codegen_expression(*sf.input)?;
         let value = self.codegen_expression(*sf.value)?;
@@ -211,6 +221,11 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_unset_field(&self, uf: air::UnsetField) -> Result<Bson> {
+        // Recall that in aggregation, a string literal that begins with '$' is a field reference.
+        // For example, `"$foo"` is a reference to the field "foo" in the input document, not a
+        // string literal with the value "$foo". `Self::wrap_in_literal_if` will wrap `s` in
+        // `$literal` if it starts with '$', which will result in it being evaluated as the string
+        // literal "$foo".
         let field = Self::wrap_in_literal_if(uf.field, |s| s.starts_with('$'));
         let input = self.codegen_expression(*uf.input)?;
         Ok(bson!({"$unsetField": {"field": field, "input": input}}))
