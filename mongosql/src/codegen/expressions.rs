@@ -184,7 +184,7 @@ impl MqlCodeGenerator {
         let input = self.codegen_expression(*gf.input)?;
         let field = match *gf.field {
             air::Expression::Literal(air::LiteralValue::String(s)) => {
-                Self::wrap_in_literal_if(s.clone(), |s| s.starts_with('$'))
+                Self::wrap_in_literal_if(s, |s| s.starts_with('$'))
             }
             _ => self.codegen_expression(*gf.field)?,
         };
