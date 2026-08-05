@@ -1,4 +1,4 @@
-use crate::ast::{pretty_print::PrettyPrint, rewrites::*};
+use crate::ast::{self, pretty_print::PrettyPrint, rewrites::*};
 
 macro_rules! test_rewrite {
     ($func_name:ident, pass = $pass:expr, expected = $expected:expr, input = $input:expr,) => {
@@ -14,6 +14,24 @@ macro_rules! test_rewrite {
             let query = parser::parse_query(input).expect("input query failed to parse");
 
             let actual = pass.apply(query).map(|q| q.pretty_print().unwrap());
+
+            assert_eq!(expected, actual);
+        }
+    };
+}
+
+// For any features that do not yet have parser support but do have `ast` support, use this macro.
+macro_rules! test_rewrite_ast {
+    ($func_name:ident, pass = $pass:expr, expected = $expected:expr, input = $input:expr,) => {
+        #[test]
+        fn $func_name() {
+            use crate::ast::rewrites::Pass;
+
+            let pass = $pass;
+            let input = $input;
+            let expected = $expected;
+
+            let actual = pass.apply(input);
 
             assert_eq!(expected, actual);
         }
@@ -1632,5 +1650,405 @@ mod higher_order_functions {
             found: 3,
         }),
         input = "SELECT ARRAY_JOIN(a, b, c)",
+    );
+
+    fn make_select_query(expr: ast::Expression) -> ast::Query {
+        ast::Query::Select(Box::new(ast::SelectQuery {
+            select_clause: ast::SelectClause {
+                set_quantifier: ast::SetQuantifier::All,
+                body: ast::SelectBody::Standard(vec![ast::SelectExpression::Expression(
+                    ast::OptionallyAliasedExpr::Unaliased(expr),
+                )]),
+            },
+            from_clause: None,
+            where_clause: None,
+            group_by_clause: None,
+            having_clause: None,
+            order_by_clause: None,
+            limit: None,
+            offset: None,
+        }))
+    }
+
+    test_rewrite_ast!(
+        map_unary_op,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Not,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
+                )),
+            })
+        )),
+    );
+
+    // The parser should always parse a lone `+` or `-` as a unary operator, however the rewriter is
+    // implemented to be tolerant of a change to that default behavior in the future. `+` and `-`
+    // are currently the only overloaded operators in MongoSQL that may be either unary or binary.
+    // In this rewriter, we convert the operator into the correct form (unary or binary) depending
+    // on which higher order function it appears in: MAP and FILTER expect a unary operator, while
+    // REDUCE expects a binary operator.
+    test_rewrite_ast!(
+        map_binary_add_rewritten_to_unary_add,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Pos,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Add)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        map_binary_sub_rewritten_to_unary_sub,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Neg,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Sub)
+                )),
+            })
+        )),
+    );
+
+    // Mul does not have a unary counterpart, so this is an error.
+    test_rewrite_ast!(
+        map_binary_op_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "Mul",
+            required: ArgCount::Exactly(2),
+            found: 1,
+        }),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Mul)
+                )),
+            })
+        )),
+    );
+
+    // Note that we do not do function arg count checking for ScalarFunctions. We leave this to the
+    // algebrizer. The only reason the rewriter checks arg counts for BinaryOps is because the ast
+    // expr _requires_ two expressions as arguments. `ast::FunctionExpr` can have any number of
+    // arguments.
+    test_rewrite_ast!(
+        map_function,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
+                    ast::FunctionExpr {
+                        function: ast::FunctionName::Upper,
+                        args: ast::FunctionArguments::Args(vec![ast::Expression::Identifier(
+                            "this".to_string()
+                        )]),
+                        set_quantifier: None,
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::Function(ast::FunctionName::Upper)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        filter_unary_op,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Not,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
+                )),
+            })
+        )),
+    );
+
+    // Again, we will rewrite overloaded binary operators to unary operators in the context of Map
+    // and Filter. Of course, `+` and `-` are semantically invalid as the function argument to
+    // Filter. However, the rewriter does not impose semantic checks except in cases where it truly
+    // cannot proceed without performing mild semantic validation (such as ensuring there are
+    // actually 2 arguments for a binary op).
+    test_rewrite_ast!(
+        filter_binary_add_rewritten_to_unary_add,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Pos,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Add)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        filter_binary_sub_rewritten_to_unary_sub,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
+                    ast::UnaryExpr {
+                        op: ast::UnaryOp::Neg,
+                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Sub)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        filter_binary_op_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "Eq",
+            required: ArgCount::Exactly(2),
+            found: 1,
+        }),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Comparison(ast::ComparisonOp::Eq))
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        filter_function,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
+                    ast::FunctionExpr {
+                        function: ast::FunctionName::Coalesce,
+                        args: ast::FunctionArguments::Args(vec![ast::Expression::Identifier(
+                            "this".to_string()
+                        )]),
+                        set_quantifier: None,
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::Function(ast::FunctionName::Coalesce)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        reduce_unary_op_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "Not",
+            required: ArgCount::Exactly(1),
+            found: 2,
+        }),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
+                )),
+            })
+        )),
+    );
+
+    // Again, overloaded unary operators (`+` and `-`) are rewritten to their binary counterparts in
+    // the context of a Reduce function since Reduce provides 2 arguments (`this` and `value`).
+    test_rewrite_ast!(
+        reduce_unary_add_rewritten_to_binary_add,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
+                    ast::BinaryExpr {
+                        op: ast::BinaryOp::Add,
+                        left: Box::new(ast::Expression::Identifier("value".to_string())),
+                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::UnaryOp(ast::UnaryOp::Pos)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        reduce_unary_sub_rewritten_to_binary_sub,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
+                    ast::BinaryExpr {
+                        op: ast::BinaryOp::Sub,
+                        left: Box::new(ast::Expression::Identifier("value".to_string())),
+                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::UnaryOp(ast::UnaryOp::Neg)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        reduce_binary_op,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
+                    ast::BinaryExpr {
+                        op: ast::BinaryOp::Div,
+                        left: Box::new(ast::Expression::Identifier("value".to_string())),
+                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::BinaryOp(ast::BinaryOp::Div)
+                )),
+            })
+        )),
+    );
+
+    test_rewrite_ast!(
+        reduce_function,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
+                    ast::FunctionExpr {
+                        function: ast::FunctionName::Pow,
+                        args: ast::FunctionArguments::Args(vec![
+                            ast::Expression::Identifier("value".to_string()),
+                            ast::Expression::Identifier("this".to_string()),
+                        ]),
+                        set_quantifier: None,
+                    }
+                ))),
+            })
+        ))),
+        input = make_select_query(ast::Expression::HigherOrderFunction(
+            ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
+                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
+                f: Box::new(ast::FunctionArgument::NamedFunction(
+                    ast::NamedFunction::Function(ast::FunctionName::Pow)
+                )),
+            })
+        )),
     );
 }
