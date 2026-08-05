@@ -1,11 +1,11 @@
 use crate::ast::{
     self,
-    rewrites::{try_exact_args, try_extract_either_args, Error, Pass, Result},
+    rewrites::{try_exact_args, try_extract_either_args, ArgCount, Error, Pass, Result},
     visitor::Visitor,
     AccessExpr, ArrayCastExpr, BinaryExpr, BinaryOp, CastExpr, ComparisonOp, Expression,
     FilterExpr, FunctionArgument, FunctionArguments, FunctionExpr, FunctionName,
-    HigherOrderFunctionExpr, IsExpr, Literal, MapExpr, ReduceExpr, SubpathExpr, TrimExpr, TrimSpec,
-    Type, TypeOrMissing, UnaryExpr, UnaryOp,
+    HigherOrderFunctionExpr, IsExpr, Literal, MapExpr, NamedFunction, ReduceExpr, SubpathExpr,
+    TrimExpr, TrimSpec, Type, TypeOrMissing, UnaryExpr, UnaryOp,
 };
 
 const THIS: &str = "this";
@@ -22,8 +22,12 @@ impl Pass for HigherOrderFunctionsRewritePass {
             return Err(error);
         }
 
-        let mut func_arg_visitor = FunctionArgumentVisitor;
+        let mut func_arg_visitor = FunctionArgumentVisitor { error: None };
         let query = query.walk(&mut func_arg_visitor);
+
+        if let Some(error) = func_arg_visitor.error {
+            return Err(error);
+        }
 
         Ok(query)
     }
@@ -125,18 +129,6 @@ impl HigherOrderFunctionsAliasVisitor {
         }))
     }
 
-    /// Returns the `this` identifier expression used within higher order function bodies.
-    #[inline(always)]
-    fn this() -> Expression {
-        Expression::Identifier(THIS.to_string())
-    }
-
-    /// Returns the `value` identifier expression used within higher order function bodies.
-    #[inline(always)]
-    fn value() -> Expression {
-        Expression::Identifier(VALUE.to_string())
-    }
-
     #[inline(always)]
     fn make_binary(left: Expression, op: BinaryOp, right: Expression) -> Expression {
         Expression::Binary(BinaryExpr {
@@ -160,7 +152,7 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_map(
             array.clone(),
             Expression::Cast(CastExpr {
-                expr: Box::new(Self::this()),
+                expr: Box::new(this()),
                 to,
                 on_null: None,
                 on_error: None,
@@ -176,7 +168,7 @@ impl HigherOrderFunctionsAliasVisitor {
         // If it is not, we should wrap it in an AccessExpr with "this" as the base.
         let f = prepend_parent_to_field_path_expr(THIS, extract_expr).unwrap_or_else(|| {
             Expression::Access(AccessExpr {
-                expr: Box::new(Self::this()),
+                expr: Box::new(this()),
                 subfield: Box::new(extract_expr.clone()),
             })
         });
@@ -193,7 +185,7 @@ impl HigherOrderFunctionsAliasVisitor {
             Expression::Unary(UnaryExpr {
                 op: UnaryOp::Not,
                 expr: Box::new(Expression::Is(IsExpr {
-                    expr: Box::new(Self::this()),
+                    expr: Box::new(this()),
                     target_type: TypeOrMissing::Type(Type::Null),
                 })),
             }),
@@ -207,7 +199,7 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_filter(
             array.clone(),
             Self::make_binary(
-                Self::this(),
+                this(),
                 BinaryOp::Comparison(ComparisonOp::Neq),
                 remove_expr.clone(),
             ),
@@ -234,7 +226,7 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_reduce(
             array.clone(),
             Expression::Literal(init_value),
-            Self::make_binary(Self::value(), op, Self::this()),
+            Self::make_binary(value(), op, this()),
         ))
     }
 
@@ -271,7 +263,7 @@ impl HigherOrderFunctionsAliasVisitor {
             Ok(Self::make_reduce(
                 array.clone(),
                 Expression::StringConstructor("".to_string()),
-                Self::make_binary(Self::value(), BinaryOp::Concat, Self::this()),
+                Self::make_binary(value(), BinaryOp::Concat, this()),
             ))
         } else {
             Ok(Expression::Trim(TrimExpr {
@@ -281,9 +273,9 @@ impl HigherOrderFunctionsAliasVisitor {
                     array.clone(),
                     Expression::StringConstructor("".to_string()),
                     Self::make_binary(
-                        Self::make_binary(Self::value(), BinaryOp::Concat, sep.clone()),
+                        Self::make_binary(value(), BinaryOp::Concat, sep.clone()),
                         BinaryOp::Concat,
-                        Self::this(),
+                        this(),
                     ),
                 )),
             }))
@@ -291,10 +283,215 @@ impl HigherOrderFunctionsAliasVisitor {
     }
 }
 
-struct FunctionArgumentVisitor;
+struct FunctionArgumentVisitor {
+    error: Option<Error>,
+}
 
-// SQL-3296: Implement FunctionArgumentVisitor
-impl Visitor for FunctionArgumentVisitor {}
+impl Visitor for FunctionArgumentVisitor {
+    fn visit_higher_order_function_expr(
+        &mut self,
+        node: HigherOrderFunctionExpr,
+    ) -> HigherOrderFunctionExpr {
+        let node = node.walk(self);
+        match node {
+            HigherOrderFunctionExpr::Map(MapExpr { array, f }) => match *f {
+                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Map(MapExpr {
+                    array,
+                    f: Box::new(FunctionArgument::Expr(expr)),
+                }),
+                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                    HigherOrderFunctionExpr::Map(MapExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(op),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
+                    HigherOrderFunctionExpr::Map(MapExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
+                    HigherOrderFunctionExpr::Map(MapExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                    self.error = Some(Error::IncorrectArgumentCount {
+                        name: op.as_str(),
+                        required: ArgCount::Exactly(2),
+                        found: 1,
+                    });
+                    HigherOrderFunctionExpr::Map(MapExpr {
+                        array,
+                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op))),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
+                    HigherOrderFunctionExpr::Map(MapExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
+                            function: op,
+                            args: FunctionArguments::Args(vec![this()]),
+                            set_quantifier: None,
+                        }))),
+                    })
+                }
+            },
+            HigherOrderFunctionExpr::Filter(FilterExpr { array, f }) => match *f {
+                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array,
+                    f: Box::new(FunctionArgument::Expr(expr)),
+                }),
+                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                    HigherOrderFunctionExpr::Filter(FilterExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(op),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
+                    HigherOrderFunctionExpr::Filter(FilterExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
+                    HigherOrderFunctionExpr::Filter(FilterExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                    self.error = Some(Error::IncorrectArgumentCount {
+                        name: op.as_str(),
+                        required: ArgCount::Exactly(2),
+                        found: 1,
+                    });
+                    HigherOrderFunctionExpr::Filter(FilterExpr {
+                        array,
+                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op))),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
+                    HigherOrderFunctionExpr::Filter(FilterExpr {
+                        array,
+                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
+                            function: op,
+                            args: FunctionArguments::Args(vec![this()]),
+                            set_quantifier: None,
+                        }))),
+                    })
+                }
+            },
+            HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                array,
+                init_value,
+                f,
+            }) => match *f {
+                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array,
+                    init_value,
+                    f: Box::new(FunctionArgument::Expr(expr)),
+                }),
+                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Pos)) => {
+                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                        array,
+                        init_value,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_binary_expr(BinaryOp::Add),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg)) => {
+                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                        array,
+                        init_value,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_binary_expr(BinaryOp::Sub),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                    self.error = Some(Error::IncorrectArgumentCount {
+                        name: op.as_str(),
+                        required: ArgCount::Exactly(1),
+                        found: 2,
+                    });
+                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                        array,
+                        init_value,
+                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op))),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                        array,
+                        init_value,
+                        f: Box::new(FunctionArgument::Expr(
+                            Self::rewrite_named_function_to_binary_expr(op),
+                        )),
+                    })
+                }
+                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
+                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                        array,
+                        init_value,
+                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
+                            function: op,
+                            args: FunctionArguments::Args(vec![value(), this()]),
+                            set_quantifier: None,
+                        }))),
+                    })
+                }
+            },
+        }
+    }
+}
+
+impl FunctionArgumentVisitor {
+    fn rewrite_named_function_to_unary_expr(op: UnaryOp) -> Expression {
+        Expression::Unary(UnaryExpr {
+            op,
+            expr: Box::new(this()),
+        })
+    }
+
+    fn rewrite_named_function_to_binary_expr(op: BinaryOp) -> Expression {
+        Expression::Binary(BinaryExpr {
+            left: Box::new(value()),
+            op,
+            right: Box::new(this()),
+        })
+    }
+}
+
+/***************************************/
+/********** Utility Functions **********/
+/***************************************/
+/// Returns the `this` identifier expression used within higher order function bodies.
+#[inline(always)]
+fn this() -> Expression {
+    Expression::Identifier(THIS.to_string())
+}
+
+/// Returns the `value` identifier expression used within higher order function bodies.
+#[inline(always)]
+fn value() -> Expression {
+    Expression::Identifier(VALUE.to_string())
+}
 
 fn prepend_parent_to_field_path_expr(
     parent: &str,

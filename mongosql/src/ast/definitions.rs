@@ -887,6 +887,17 @@ pub enum UnaryOp {
     Not,
 }
 
+impl UnaryOp {
+    pub fn as_str(&self) -> &'static str {
+        use UnaryOp::*;
+        match self {
+            Pos => "Pos",
+            Neg => "Neg",
+            Not => "Not",
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy, VariantCount)]
 pub enum BinaryOp {
     Add,
