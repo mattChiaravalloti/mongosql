@@ -214,7 +214,7 @@ impl HigherOrderFunctionsAliasVisitor {
     }
 
     /// Rewrite any single-argument reduce-alias function (e.g., `ARRAY_SUM(a)` into
-    /// `REDUCE(a, init_value, value op this)`.
+    /// `REDUCE(a, init_value, value op this)`).
     fn rewrite_single_arg_reduce_alias(
         name: &'static str,
         args: &[Expression],
@@ -230,7 +230,7 @@ impl HigherOrderFunctionsAliasVisitor {
         ))
     }
 
-    /// Rewrite `ARRAY_AVG(a)` into `REDUCE(a, 0, this + value) / SIZE(a)`.
+    /// Rewrite `ARRAY_AVG(a)` into `REDUCE(a, 0, value + this) / SIZE(a)`.
     fn rewrite_array_avg(args: &[Expression]) -> Result<Expression> {
         let rewritten_sum = Self::rewrite_single_arg_reduce_alias(
             "ARRAY_AVG",
@@ -294,174 +294,98 @@ impl Visitor for FunctionArgumentVisitor {
     ) -> HigherOrderFunctionExpr {
         let node = node.walk(self);
         match node {
-            HigherOrderFunctionExpr::Map(MapExpr { array, f }) => match *f {
-                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Map(MapExpr {
+            HigherOrderFunctionExpr::Map(MapExpr { array, f }) => {
+                HigherOrderFunctionExpr::Map(MapExpr {
                     array,
-                    f: Box::new(FunctionArgument::Expr(expr)),
-                }),
-                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
-                    HigherOrderFunctionExpr::Map(MapExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(op),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
-                    HigherOrderFunctionExpr::Map(MapExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
-                    HigherOrderFunctionExpr::Map(MapExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
-                    self.error = Some(Error::IncorrectArgumentCount {
-                        name: op.as_str(),
-                        required: ArgCount::Exactly(2),
-                        found: 1,
-                    });
-                    HigherOrderFunctionExpr::Map(MapExpr {
-                        array,
-                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op))),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
-                    HigherOrderFunctionExpr::Map(MapExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
-                            function: op,
-                            args: FunctionArguments::Args(vec![this()]),
-                            set_quantifier: None,
-                        }))),
-                    })
-                }
-            },
-            HigherOrderFunctionExpr::Filter(FilterExpr { array, f }) => match *f {
-                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Filter(FilterExpr {
+                    f: Box::new(self.rewrite_unary_context_arg(*f)),
+                })
+            }
+            HigherOrderFunctionExpr::Filter(FilterExpr { array, f }) => {
+                HigherOrderFunctionExpr::Filter(FilterExpr {
                     array,
-                    f: Box::new(FunctionArgument::Expr(expr)),
-                }),
-                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
-                    HigherOrderFunctionExpr::Filter(FilterExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(op),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
-                    HigherOrderFunctionExpr::Filter(FilterExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
-                    HigherOrderFunctionExpr::Filter(FilterExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
-                    self.error = Some(Error::IncorrectArgumentCount {
-                        name: op.as_str(),
-                        required: ArgCount::Exactly(2),
-                        found: 1,
-                    });
-                    HigherOrderFunctionExpr::Filter(FilterExpr {
-                        array,
-                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op))),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
-                    HigherOrderFunctionExpr::Filter(FilterExpr {
-                        array,
-                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
-                            function: op,
-                            args: FunctionArguments::Args(vec![this()]),
-                            set_quantifier: None,
-                        }))),
-                    })
-                }
-            },
+                    f: Box::new(self.rewrite_unary_context_arg(*f)),
+                })
+            }
             HigherOrderFunctionExpr::Reduce(ReduceExpr {
                 array,
                 init_value,
                 f,
-            }) => match *f {
-                FunctionArgument::Expr(expr) => HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                    array,
-                    init_value,
-                    f: Box::new(FunctionArgument::Expr(expr)),
-                }),
-                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Pos)) => {
-                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                        array,
-                        init_value,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_binary_expr(BinaryOp::Add),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg)) => {
-                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                        array,
-                        init_value,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_binary_expr(BinaryOp::Sub),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
-                    self.error = Some(Error::IncorrectArgumentCount {
-                        name: op.as_str(),
-                        required: ArgCount::Exactly(1),
-                        found: 2,
-                    });
-                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                        array,
-                        init_value,
-                        f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op))),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
-                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                        array,
-                        init_value,
-                        f: Box::new(FunctionArgument::Expr(
-                            Self::rewrite_named_function_to_binary_expr(op),
-                        )),
-                    })
-                }
-                FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
-                    HigherOrderFunctionExpr::Reduce(ReduceExpr {
-                        array,
-                        init_value,
-                        f: Box::new(FunctionArgument::Expr(Expression::Function(FunctionExpr {
-                            function: op,
-                            args: FunctionArguments::Args(vec![value(), this()]),
-                            set_quantifier: None,
-                        }))),
-                    })
-                }
-            },
+            }) => HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                array,
+                init_value,
+                f: Box::new(self.rewrite_binary_context_arg(*f)),
+            }),
         }
     }
 }
 
 impl FunctionArgumentVisitor {
+    /// Rewrites a `FunctionArgument` appearing in a "unary context", i.e. the body of a `MAP` or
+    /// `FILTER`, where the function is applied to a single argument, `this`.
+    ///
+    /// The overloaded binary operators `+` and `-` are rewritten to their unary counterparts.
+    /// Any other binary operator is an error, since it requires two arguments; in that case the
+    /// argument is returned unchanged (this is because error checking happens after the visitor
+    /// returns).
+    fn rewrite_unary_context_arg(&mut self, f: FunctionArgument) -> FunctionArgument {
+        match f {
+            FunctionArgument::Expr(_) => f,
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(op))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                self.error = Some(Error::IncorrectArgumentCount {
+                    name: op.as_str(),
+                    required: ArgCount::Exactly(2),
+                    found: 1,
+                });
+                f
+            }
+            FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
+                FunctionArgument::Expr(Self::named_function_to_function_call(op, vec![this()]))
+            }
+        }
+    }
+
+    /// Rewrites a `FunctionArgument` appearing in a "binary context", i.e. the body of a `REDUCE`,
+    /// where the function is applied to two arguments, `value` and `this`.
+    ///
+    /// The overloaded unary operators `+` and `-` are rewritten to their binary counterparts.
+    /// Any other unary operator is an error, since it requires a single argument; in that case the
+    /// argument is returned unchanged (this is because error checking happens after the visitor
+    /// returns).
+    fn rewrite_binary_context_arg(&mut self, f: FunctionArgument) -> FunctionArgument {
+        match f {
+            FunctionArgument::Expr(_) => f,
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Pos)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(BinaryOp::Add))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(BinaryOp::Sub))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                self.error = Some(Error::IncorrectArgumentCount {
+                    name: op.as_str(),
+                    required: ArgCount::Exactly(1),
+                    found: 2,
+                });
+                f
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(op))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::Function(op)) => FunctionArgument::Expr(
+                Self::named_function_to_function_call(op, vec![value(), this()]),
+            ),
+        }
+    }
+
     fn rewrite_named_function_to_unary_expr(op: UnaryOp) -> Expression {
         Expression::Unary(UnaryExpr {
             op,
@@ -474,6 +398,14 @@ impl FunctionArgumentVisitor {
             left: Box::new(value()),
             op,
             right: Box::new(this()),
+        })
+    }
+
+    fn named_function_to_function_call(op: FunctionName, args: Vec<Expression>) -> Expression {
+        Expression::Function(FunctionExpr {
+            function: op,
+            args: FunctionArguments::Args(args),
+            set_quantifier: None,
         })
     }
 }
