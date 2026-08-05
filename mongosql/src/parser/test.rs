@@ -1592,7 +1592,7 @@ mod array {
     parsable!(indexing, expected = true, input = "select [1, 2, 3][0]");
 }
 
-mod parenthized_expression {
+mod parenthesized_expression {
     parsable!(
         multiple_binary_ops,
         expected = true,
@@ -3660,5 +3660,97 @@ mod unrecognized_token_suggestion {
         expected = false,
         expected_error_user_msg = "Unrecognized token `notavalidquery`, expected: `SELECT`, `WITH`",
         input = "notavalidquery"
+    );
+}
+
+mod higher_order_functions {
+    use crate::ast::*;
+
+    parsable!(
+        map_with_expr_function_arg,
+        expected = true,
+        input = "SELECT MAP([1, 2, 3], this + 1)"
+    );
+
+    parsable!(
+        map_with_named_function_unary_op_arg,
+        expected = true,
+        input = "SELECT MAP(a, not)"
+    );
+
+    parsable!(
+        map_with_named_function_binray_op_arg,
+        expected = true,
+        input = "SELECT MAP(a, *)"
+    );
+
+    parsable!(
+        map_with_named_function_function_arg,
+        expected = true,
+        input = "SELECT MAP(a, LOWER)"
+    );
+
+    validate_ast!(
+        map_with_expr_function_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".to_string())),
+            f: Box::new(FunctionArgument::Expr(Expression::Binary(BinaryExpr {
+                left: Box::new(Expression::Identifier("this".to_string())),
+                op: BinaryOp::Mul,
+                right: Box::new(Expression::Identifier("this".to_string())),
+            }))),
+        })),
+        input = "map(a, this * this)",
+    );
+
+    // Note that the parser defaults to UnaryOp::Pos for `+`.
+    validate_ast!(
+        map_with_named_function_pos_unary_op_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".to_string())),
+            f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                UnaryOp::Pos
+            ))),
+        })),
+        input = "map(a, +)",
+    );
+
+    // Note that the parser defaults to UnaryOp::Neg for `-`.
+    validate_ast!(
+        map_with_named_function_neg_unary_op_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".to_string())),
+            f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                UnaryOp::Neg
+            ))),
+        })),
+        input = "map(a, -)",
+    );
+
+    validate_ast!(
+        map_with_named_function_binary_op_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".to_string())),
+            f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                BinaryOp::Div
+            ))),
+        })),
+        input = "map(a, /)",
+    );
+
+    validate_ast!(
+        map_with_named_function_function_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".to_string())),
+            f: Box::new(FunctionArgument::NamedFunction(NamedFunction::Function(
+                FunctionName::Log10
+            ))),
+        })),
+        input = "map(a, LOG10)",
     );
 }
