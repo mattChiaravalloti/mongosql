@@ -57,7 +57,7 @@ pub enum Error {
     #[error("incorrect argument count for {name}: required {required}, found {found}")]
     IncorrectArgumentCount {
         name: &'static str,
-        required: &'static str,
+        required: ArgCount,
         found: usize,
     },
     #[error("invalid date part: {0}")]
@@ -99,4 +99,63 @@ pub fn rewrite_query(query: ast::Query) -> Result<ast::Query> {
         rewritten = pass.apply(rewritten)?;
     }
     Ok(rewritten)
+}
+
+/// Specifies how many arguments a function accepts.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum ArgCount {
+    /// Exactly this many arguments.
+    Exactly(usize),
+    /// Either of these many arguments.
+    Either(usize, usize),
+}
+
+impl std::fmt::Display for ArgCount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArgCount::Exactly(n) => write!(f, "{n}"),
+            ArgCount::Either(a, b) => write!(f, "{a} or {b}"),
+        }
+    }
+}
+
+/// Validates that `args` contains `N` elements, extracting them into as fixed-size array of length
+/// `N` if so. If `args` does not contain exactly `N` elements, an `IncorrectArgumentCount` error is
+/// returned.
+#[inline]
+pub(crate) fn try_exact_args<'a, const N: usize>(
+    name: &'static str,
+    args: &'a [ast::Expression],
+) -> Result<&'a [ast::Expression; N]> {
+    let Ok(extracted) = args.try_into() else {
+        return Err(Error::IncorrectArgumentCount {
+            name,
+            required: ArgCount::Exactly(N),
+            found: args.len(),
+        });
+    };
+    Ok(extracted)
+}
+
+/// Validates that `args` contains either `A` or `B` elements, extracting them into as fixed-size
+/// array of length `A` and a slice of the remaining elements if so. If `args` does not contain
+/// exactly `A` or exactly `B` elements, an `IncorrectArgumentCount` error is returned.
+#[inline]
+pub(crate) fn try_extract_either_args<'a, const A: usize, const B: usize>(
+    name: &'static str,
+    args: &'a [ast::Expression],
+) -> Result<(&'a [ast::Expression; A], &'a [ast::Expression])> {
+    if args.len() != A && args.len() != B {
+        return Err(Error::IncorrectArgumentCount {
+            name,
+            required: ArgCount::Either(A, B),
+            found: args.len(),
+        });
+    }
+
+    let (min, rest) = args.split_at(A);
+    let Ok(min) = min.try_into() else {
+        unreachable!();
+    };
+    Ok((min, rest))
 }

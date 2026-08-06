@@ -1095,7 +1095,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "LOG",
-            required: "1 or 2",
+            required: ArgCount::Either(1, 2),
             found: 3
         }),
         input = "SELECT { fn LOG(10, 5, 10) }",
@@ -1123,7 +1123,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "LTRIM",
-            required: "1",
+            required: ArgCount::Exactly(1),
             found: 2
         }),
         input = "SELECT LTRIM(' stuff ', 'more stuff')",
@@ -1139,7 +1139,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "RTRIM",
-            required: "1",
+            required: ArgCount::Exactly(1),
             found: 2
         }),
         input = "SELECT RTRIM(' stuff ', 'more stuff')",
@@ -1155,7 +1155,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "DATEADD",
-            required: "3",
+            required: ArgCount::Exactly(3),
             found: 2
         }),
         input = "SELECT DATEADD(YEAR, 2)",
@@ -1177,7 +1177,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "DATEDIFF",
-            required: "3 or 4",
+            required: ArgCount::Either(3, 4),
             found: 2
         }),
         input = "SELECT DATEDIFF(QUARTER, d1)",
@@ -1199,7 +1199,7 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Err(Error::IncorrectArgumentCount {
             name: "DATETRUNC",
-            required: "2 or 3",
+            required: ArgCount::Either(2, 3),
             found: 1
         }),
         input = "SELECT DATETRUNC(YEAR)",
@@ -1395,5 +1395,242 @@ mod scalar_functions {
         pass = ScalarFunctionsRewritePass,
         expected = Ok("SELECT EXTRACT(YEAR FROM d)"),
         input = "SELECT EXTRACT(YEAR FROM d)",
+    );
+}
+
+mod higher_order_functions {
+    use super::*;
+
+    test_rewrite!(
+        array_cast,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT MAP(a, CAST(this AS STRING))"),
+        input = "SELECT ARRAY_CAST(a, STRING)",
+    );
+
+    test_rewrite!(
+        array_extract_identifier,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT MAP(a, this.x)"),
+        input = "SELECT ARRAY_EXTRACT(a, x)",
+    );
+
+    test_rewrite!(
+        array_extract_subpath,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT MAP(a, this.x.y.z)"),
+        input = "SELECT ARRAY_EXTRACT(a, x.y.z)",
+    );
+
+    test_rewrite!(
+        array_extract_literal,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT MAP(a, this['field'])"),
+        input = "SELECT ARRAY_EXTRACT(a, 'field')",
+    );
+
+    test_rewrite!(
+        array_extract_other_expr,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT MAP(a, this[field || '_1'])"),
+        input = "SELECT ARRAY_EXTRACT(a, field || '_1')",
+    );
+
+    test_rewrite!(
+        array_extract_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_EXTRACT",
+            required: ArgCount::Exactly(2),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_EXTRACT()",
+    );
+
+    test_rewrite!(
+        array_compact,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT FILTER(a, NOT this IS NULL)"),
+        input = "SELECT ARRAY_COMPACT(a)",
+    );
+
+    test_rewrite!(
+        array_compact_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_COMPACT",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_COMPACT()",
+    );
+
+    test_rewrite!(
+        array_remove,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT FILTER(a, this <> x)"),
+        input = "SELECT ARRAY_REMOVE(a, x)",
+    );
+
+    test_rewrite!(
+        array_remove_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_REMOVE",
+            required: ArgCount::Exactly(2),
+            found: 1,
+        }),
+        input = "SELECT ARRAY_REMOVE(a)",
+    );
+
+    test_rewrite!(
+        array_count_if,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT SIZE(FILTER(a, this > y))"),
+        input = "SELECT ARRAY_COUNT_IF(a, this > y)",
+    );
+
+    test_rewrite!(
+        array_count_if_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_COUNT_IF",
+            required: ArgCount::Exactly(2),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_COUNT_IF()",
+    );
+
+    test_rewrite!(
+        array_sum,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, 0, `value` + this)"),
+        input = "SELECT ARRAY_SUM(a)",
+    );
+
+    test_rewrite!(
+        array_sum_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_SUM",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_SUM()",
+    );
+
+    test_rewrite!(
+        array_product,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, 1, `value` * this)"),
+        input = "SELECT ARRAY_PRODUCT(a)",
+    );
+
+    test_rewrite!(
+        array_product_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_PRODUCT",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_PRODUCT()",
+    );
+
+    test_rewrite!(
+        array_averge,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, 0, `value` + this) / SIZE(a)"),
+        input = "SELECT ARRAY_AVG(a)",
+    );
+
+    test_rewrite!(
+        array_average_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_AVG",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_AVG()",
+    );
+
+    test_rewrite!(
+        array_all,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, true, `value` AND this)"),
+        input = "SELECT ARRAY_ALL(a)",
+    );
+
+    test_rewrite!(
+        array_all_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_ALL",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_ALL()",
+    );
+
+    test_rewrite!(
+        array_any,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, false, `value` OR this)"),
+        input = "SELECT ARRAY_ANY(a)",
+    );
+
+    test_rewrite!(
+        array_any_invalid,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_ANY",
+            required: ArgCount::Exactly(1),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_ANY()",
+    );
+
+    test_rewrite!(
+        array_join_without_separator,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, '', `value` || this)"),
+        input = "SELECT ARRAY_JOIN(a)",
+    );
+
+    test_rewrite!(
+        array_join_with_empty_separator,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT REDUCE(a, '', `value` || this)"),
+        input = "SELECT ARRAY_JOIN(a, '')",
+    );
+
+    test_rewrite!(
+        array_join_with_non_empty_separator,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Ok("SELECT TRIM(LEADING ',' FROM REDUCE(a, '', `value` || ',' || this))"),
+        input = "SELECT ARRAY_JOIN(a, ',')",
+    );
+
+    test_rewrite!(
+        array_join_invalid_too_few,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_JOIN",
+            required: ArgCount::Either(1, 2),
+            found: 0,
+        }),
+        input = "SELECT ARRAY_JOIN()",
+    );
+
+    test_rewrite!(
+        array_join_invalid_too_many,
+        pass = HigherOrderFunctionsRewritePass,
+        expected = Err(Error::IncorrectArgumentCount {
+            name: "ARRAY_JOIN",
+            required: ArgCount::Either(1, 2),
+            found: 3,
+        }),
+        input = "SELECT ARRAY_JOIN(a, b, c)",
     );
 }

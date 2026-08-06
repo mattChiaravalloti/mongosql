@@ -289,6 +289,7 @@ pub enum Expression {
     Extract(ExtractExpr),
     Cast(CastExpr),
     Array(Vec<Expression>),
+    ArrayCast(ArrayCastExpr),
     Subquery(Box<Query>),
     Exists(Box<Query>),
     SubqueryComparison(SubqueryComparisonExpr),
@@ -326,6 +327,12 @@ pub struct CastExpr {
     pub to: Type,
     pub on_null: Option<Box<Expression>>,
     pub on_error: Option<Box<Expression>>,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct ArrayCastExpr {
+    pub expr: Box<Expression>,
+    pub to: Type,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -488,6 +495,18 @@ pub enum FunctionName {
     Minute,
     Second,
     Millisecond,
+
+    // Higher Order Function aliases
+    ArrayExtract,
+    ArrayCompact,
+    ArrayRemove,
+    ArrayCountIf,
+    ArraySum,
+    ArrayProduct,
+    ArrayAvg,
+    ArrayAll,
+    ArrayAny,
+    ArrayJoin,
 }
 
 impl TryFrom<FunctionName> for TrimSpec {
@@ -632,6 +651,17 @@ impl TryFrom<&str> for FunctionName {
             "MINUTE" => Ok(FunctionName::Minute),
             "SECOND" => Ok(FunctionName::Second),
             "MILLISECOND" => Ok(FunctionName::Millisecond),
+
+            "ARRAY_EXTRACT" => Ok(FunctionName::ArrayExtract),
+            "ARRAY_COMPACT" => Ok(FunctionName::ArrayCompact),
+            "ARRAY_REMOVE" => Ok(FunctionName::ArrayRemove),
+            "ARRAY_COUNT_IF" => Ok(FunctionName::ArrayCountIf),
+            "ARRAY_SUM" => Ok(FunctionName::ArraySum),
+            "ARRAY_PRODUCT" => Ok(FunctionName::ArrayProduct),
+            "ARRAY_AVG" => Ok(FunctionName::ArrayAvg),
+            "ARRAY_ALL" => Ok(FunctionName::ArrayAll),
+            "ARRAY_ANY" => Ok(FunctionName::ArrayAny),
+            "ARRAY_JOIN" => Ok(FunctionName::ArrayJoin),
             _ => Err(format!("unknown function {name}")),
         }
     }
@@ -697,6 +727,16 @@ impl FunctionName {
             FunctionName::Minute => "MINUTE",
             FunctionName::Second => "SECOND",
             FunctionName::Millisecond => "MILLISECOND",
+            FunctionName::ArrayExtract => "ARRAY_EXTRACT",
+            FunctionName::ArrayCompact => "ARRAY_COMPACT",
+            FunctionName::ArrayRemove => "ARRAY_REMOVE",
+            FunctionName::ArrayCountIf => "ARRAY_COUNT_IF",
+            FunctionName::ArraySum => "ARRAY_SUM",
+            FunctionName::ArrayProduct => "ARRAY_PRODUCT",
+            FunctionName::ArrayAvg => "ARRAY_AVG",
+            FunctionName::ArrayAll => "ARRAY_ALL",
+            FunctionName::ArrayAny => "ARRAY_ANY",
+            FunctionName::ArrayJoin => "ARRAY_JOIN",
         }
     }
 
@@ -758,7 +798,17 @@ impl FunctionName {
             | FunctionName::Hour
             | FunctionName::Minute
             | FunctionName::Second
-            | FunctionName::Millisecond => false,
+            | FunctionName::Millisecond
+            | FunctionName::ArrayExtract
+            | FunctionName::ArrayCompact
+            | FunctionName::ArrayRemove
+            | FunctionName::ArrayCountIf
+            | FunctionName::ArraySum
+            | FunctionName::ArrayProduct
+            | FunctionName::ArrayAvg
+            | FunctionName::ArrayAll
+            | FunctionName::ArrayAny
+            | FunctionName::ArrayJoin => false,
         }
     }
 }
@@ -960,41 +1010,41 @@ pub enum Type {
 
 #[derive(PartialEq, Debug, Clone, VariantCount)]
 pub enum HigherOrderFunctionExpr {
-  Map(MapExpr),
-  Filter(FilterExpr),
-  Reduce(ReduceExpr),
+    Map(MapExpr),
+    Filter(FilterExpr),
+    Reduce(ReduceExpr),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct MapExpr {
-  pub array: Box<Expression>,
-  pub f: Box<FunctionArgument>,
+    pub array: Box<Expression>,
+    pub f: Box<FunctionArgument>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct FilterExpr {
-  pub array: Box<Expression>,
-  pub f: Box<FunctionArgument>,
+    pub array: Box<Expression>,
+    pub f: Box<FunctionArgument>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct ReduceExpr {
-  pub array: Box<Expression>,
-  pub init_value: Box<Expression>,
-  pub f: Box<FunctionArgument>,
+    pub array: Box<Expression>,
+    pub init_value: Box<Expression>,
+    pub f: Box<FunctionArgument>,
 }
 
 #[derive(PartialEq, Debug, Clone, VariantCount)]
 pub enum FunctionArgument {
-  Expr(Expression),
-  NamedFunction(NamedFunction)
+    Expr(Expression),
+    NamedFunction(NamedFunction)
 }
 
 #[derive(PartialEq, Debug, Clone, VariantCount)]
 pub enum NamedFunction {
-  UnaryOp(UnaryOp),
-  BinaryOp(BinaryOp),
-  Function(FunctionName),
+    UnaryOp(UnaryOp),
+    BinaryOp(BinaryOp),
+    Function(FunctionName),
 }
 
 } // end of generate_visitors! block

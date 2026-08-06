@@ -105,7 +105,17 @@ impl TryFrom<ast::FunctionName> for mir::ScalarFunction {
             | ast::FunctionName::Hour
             | ast::FunctionName::Minute
             | ast::FunctionName::Second
-            | ast::FunctionName::Millisecond => unreachable! {},
+            | ast::FunctionName::Millisecond
+            | ast::FunctionName::ArrayExtract
+            | ast::FunctionName::ArrayCompact
+            | ast::FunctionName::ArrayRemove
+            | ast::FunctionName::ArrayCountIf
+            | ast::FunctionName::ArraySum
+            | ast::FunctionName::ArrayProduct
+            | ast::FunctionName::ArrayAvg
+            | ast::FunctionName::ArrayAll
+            | ast::FunctionName::ArrayAny
+            | ast::FunctionName::ArrayJoin => unreachable! {},
             ast::FunctionName::AddToArray
             | ast::FunctionName::AddToSet
             | ast::FunctionName::Avg
@@ -184,7 +194,17 @@ impl TryFrom<ast::FunctionName> for mir::AggregationFunction {
             | ast::FunctionName::Hour
             | ast::FunctionName::Minute
             | ast::FunctionName::Second
-            | ast::FunctionName::Millisecond => {
+            | ast::FunctionName::Millisecond
+            | ast::FunctionName::ArrayExtract
+            | ast::FunctionName::ArrayCompact
+            | ast::FunctionName::ArrayRemove
+            | ast::FunctionName::ArrayCountIf
+            | ast::FunctionName::ArraySum
+            | ast::FunctionName::ArrayProduct
+            | ast::FunctionName::ArrayAvg
+            | ast::FunctionName::ArrayAll
+            | ast::FunctionName::ArrayAny
+            | ast::FunctionName::ArrayJoin => {
                 return Err(Error::ScalarInPlaceOfAggregation(f.pretty_print().unwrap()))
             }
         })
@@ -1540,6 +1560,7 @@ impl<'a> Algebrizer<'a> {
             ast::Expression::SubqueryComparison(s) => self.algebrize_subquery_comparison(s),
             ast::Expression::Exists(e) => self.algebrize_exists(*e),
             ast::Expression::HigherOrderFunction(h) => self.algebrize_higher_order_function(h),
+            ast::Expression::ArrayCast(_) => unreachable!("ARRAY_CAST should have been rewritten"),
         }
     }
 
@@ -1902,7 +1923,17 @@ impl<'a> Algebrizer<'a> {
             | (ast::FunctionName::Hour, _)
             | (ast::FunctionName::Minute, _)
             | (ast::FunctionName::Second, _)
-            | (ast::FunctionName::Millisecond, _) => {
+            | (ast::FunctionName::Millisecond, _)
+            | (ast::FunctionName::ArrayExtract, _)
+            | (ast::FunctionName::ArrayCompact, _)
+            | (ast::FunctionName::ArrayRemove, _)
+            | (ast::FunctionName::ArrayCountIf, _)
+            | (ast::FunctionName::ArraySum, _)
+            | (ast::FunctionName::ArrayProduct, _)
+            | (ast::FunctionName::ArrayAvg, _)
+            | (ast::FunctionName::ArrayAll, _)
+            | (ast::FunctionName::ArrayAny, _)
+            | (ast::FunctionName::ArrayJoin, _) => {
                 unreachable!("{:?} should have been rewritten", f.function)
             }
         };

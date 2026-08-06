@@ -544,6 +544,7 @@ mod identifier {
         input = "foo1"
     );
     expression_printer_test!(empty, expected = "``", input = "``");
+    expression_printer_test!(is_keyword, expected = "`is`", input = "`is`");
 }
 
 mod is {
@@ -740,6 +741,15 @@ mod cast_and_assert {
         int_on_null_on_error,
         expected = "CAST(x AS INT, 'bar' ON NULL, 'foo' ON ERROR)",
         input = "CAST(x as int, 'bar' ON NULL, 'foo' ON ERROR)"
+    );
+}
+
+mod array_cast {
+    use super::*;
+    expression_printer_test!(
+        array_cast,
+        expected = "ARRAY_CAST(x, STRING)",
+        input = "ARRAY_CAST(x, STRING)"
     );
 }
 
