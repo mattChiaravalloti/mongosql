@@ -1,0 +1,6 @@
+tests:
+  - description: IncorrectArgumentCount with Minimum requirement in Higher Order Function
+    query: "SELECT MAP(a, *) FROM foo"
+    current_db: test
+    should_compile: false
+    rewriter_error: 'rewrite error: incorrect argument count for Mul: required 2, found 1'
