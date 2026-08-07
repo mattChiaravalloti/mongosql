@@ -8,7 +8,6 @@ tests:
   # array schema of the first argument.
   - description: MAP operand type constraints
     query: "SELECT MAP(arg1, arg2) FROM foo"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     valid_types:
       - { "arg1": ["ARRAY", "NULL"], "arg2": *any }
 
@@ -18,7 +17,6 @@ tests:
   # the inner type of the array schema of the first argument.
   - description: FILTER operand type constraints
     query: "SELECT FILTER(arg1, arg2) FROM foo"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     valid_types:
       - { "arg1": ["ARRAY", "NULL"], "arg2": ["BOOL", "NULL"] }
 
@@ -32,6 +30,5 @@ tests:
   # result in "value" violating any schema constraints of its appearances, the expression is valid.
   - description: REDUCE operand type constraints
     query: "SELECT REDUCE(arg1, arg2, arg3) FROM foo"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     valid_types:
       - { "arg1": ["ARRAY", "NULL"], "arg2": *any, "arg3": *any }

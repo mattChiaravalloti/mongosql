@@ -2263,6 +2263,37 @@ trait HigherOrderFunction: SqlFunction {
             error: Box::new(error),
         }
     }
+
+    /// Validate that the given array expression satisfies ANY_ARRAY_OR_NULLISH. Return the array
+    /// schema and return its item schema.
+    fn validate_array_and_get_item_schema(
+        &self,
+        state: &SchemaInferenceState,
+        array: &Expression,
+    ) -> Result<(Schema, Schema), Error> {
+        // The first argument must satisfy ANY_ARRAY_OR_NULLISH.
+        let array_schema = array.schema(state)?;
+        if !state.check_satisfies(&array_schema, &ANY_ARRAY_OR_NULLISH) {
+            return Err(Error::SchemaChecking {
+                name: self.as_str(),
+                required: ANY_ARRAY_OR_NULLISH.clone().into(),
+                found: array_schema.into(),
+                var_cause: array.as_var_cause(),
+            });
+        }
+
+        // At this point, we know the schema satisfies ANY_ARRAY_OR_NULLISH. In STRICT mode, that
+        // means the schema must be exactly NULLISH if there is no array item schema. In RELAXED
+        // mode, technically there may be other non-array/non-nullish schemas, but those will cause
+        // runtime errors (which users tolerate in RELAXED mode). Therefore, we use Missing as the
+        // default schema for "this" if the array item schema is None since we know the `array` arg
+        // is never an array.
+        let array_item_schema = array_schema
+            .get_array_item_schema()
+            .unwrap_or(Schema::Missing);
+
+        Ok((array_schema, array_item_schema))
+    }
 }
 
 impl HigherOrderFunctionApplication {
@@ -2283,26 +2314,8 @@ impl SqlFunction for MapExpr {
 
 impl HigherOrderFunction for MapExpr {
     fn schema(&self, state: &SchemaInferenceState) -> Result<Schema, Error> {
-        // The first argument must satisfy ANY_ARRAY_OR_NULLISH.
-        let array_schema = self.array.schema(state)?;
-        if !state.check_satisfies(&array_schema, &ANY_ARRAY_OR_NULLISH) {
-            return Err(Error::SchemaChecking {
-                name: self.as_str(),
-                required: ANY_ARRAY_OR_NULLISH.clone().into(),
-                found: array_schema.into(),
-                var_cause: self.array.as_var_cause(),
-            });
-        }
-
-        let Some(array_item_schema) = array_schema.get_array_item_schema() else {
-            // At this point, we know the schema satisfies ANY_ARRAY_OR_NULLISH. In STRICT
-            // mode, that means the schema must be exactly NULLISH if there is no array item
-            // schema. In RELAXED mode, technically there may be other non-array/non-nullish
-            // schemas, but those would cause runtime errors. Therefore, we can just return
-            // Null as the expression schema at this point since we know the `array` arg is
-            // never an array.
-            return Ok(Schema::Atomic(Atomic::Null));
-        };
+        let (array_schema, array_item_schema) =
+            self.validate_array_and_get_item_schema(state, self.array.as_ref())?;
 
         // Add the array item schema to the SchemaInferenceState as a variable using the
         // name `this`.
@@ -2334,26 +2347,8 @@ impl SqlFunction for FilterExpr {
 
 impl HigherOrderFunction for FilterExpr {
     fn schema(&self, state: &SchemaInferenceState) -> Result<Schema, Error> {
-        // The first argument must satisfy ANY_ARRAY_OR_NULLISH.
-        let array_schema = self.array.schema(state)?;
-        if !state.check_satisfies(&array_schema, &ANY_ARRAY_OR_NULLISH) {
-            return Err(Error::SchemaChecking {
-                name: self.as_str(),
-                required: ANY_ARRAY_OR_NULLISH.clone().into(),
-                found: array_schema.into(),
-                var_cause: self.array.as_var_cause(),
-            });
-        }
-
-        let Some(array_item_schema) = array_schema.get_array_item_schema() else {
-            // At this point, we know the schema satisfies ANY_ARRAY_OR_NULLISH. In STRICT
-            // mode, that means the schema must be exactly NULLISH if there is no array item
-            // schema. In RELAXED mode, technically there may be other non-array/non-nullish
-            // schemas, but those would cause runtime errors. Therefore, we can just return
-            // Null as the expression schema at this point since we know the `array` arg is
-            // never an array.
-            return Ok(Schema::Atomic(Atomic::Null));
-        };
+        let (array_schema, array_item_schema) =
+            self.validate_array_and_get_item_schema(state, self.array.as_ref())?;
 
         // Add the array item schema to the SchemaInferenceState as a variable using the
         // name `this`.
@@ -2391,26 +2386,8 @@ impl SqlFunction for ReduceExpr {
 
 impl HigherOrderFunction for ReduceExpr {
     fn schema(&self, state: &SchemaInferenceState) -> Result<Schema, Error> {
-        // The first argument must satisfy ANY_ARRAY_OR_NULLISH.
-        let array_schema = self.array.schema(state)?;
-        if !state.check_satisfies(&array_schema, &ANY_ARRAY_OR_NULLISH) {
-            return Err(Error::SchemaChecking {
-                name: self.as_str(),
-                required: ANY_ARRAY_OR_NULLISH.clone().into(),
-                found: array_schema.into(),
-                var_cause: self.array.as_var_cause(),
-            });
-        }
-
-        let Some(array_item_schema) = array_schema.get_array_item_schema() else {
-            // At this point, we know the schema satisfies ANY_ARRAY_OR_NULLISH. In STRICT
-            // mode, that means the schema must be exactly NULLISH if there is no array item
-            // schema. In RELAXED mode, technically there may be other non-array/non-nullish
-            // schemas, but those would cause runtime errors. Therefore, we can just return
-            // Null as the expression schema at this point since we know the `array` arg is
-            // never an array.
-            return Ok(Schema::Atomic(Atomic::Null));
-        };
+        let (array_schema, array_item_schema) =
+            self.validate_array_and_get_item_schema(state, self.array.as_ref())?;
 
         // Get the initial value schema. If it is invalid, indicate that an invalid initial value
         // expression was provided.
