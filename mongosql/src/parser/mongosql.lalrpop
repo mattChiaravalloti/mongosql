@@ -403,11 +403,24 @@ Substring: FunctionExpr = {
 }
 
 HigherOrderFunctionExpr: HigherOrderFunctionExpr = {
-    MAP LEFT_PAREN <e1:Expression> COMMA <e2:FunctionArgument> RIGHT_PAREN =>? {
-        Ok(HigherOrderFunctionExpr::Map(MapExpr {
+    MAP LEFT_PAREN <e1:Expression> COMMA <e2:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Map(MapExpr {
             array: Box::new(e1),
             f: Box::new(e2),
-        }))
+        })
+    },
+    FILTER LEFT_PAREN <e1:Expression> COMMA <e2:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Filter(FilterExpr {
+            array: Box::new(e1),
+            f: Box::new(e2),
+        })
+    },
+    REDUCE LEFT_PAREN <e1:Expression> COMMA <e2:Expression> COMMA <e3:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Reduce(ReduceExpr {
+            array: Box::new(e1),
+            init_value: Box::new(e2),
+            f: Box::new(e3),
+        })
     },
 }
 
@@ -902,6 +915,7 @@ match {
   r"(?i)extract" => EXTRACT,
   r"(?i)false" => FALSE,
   r"(?i)fetch\s+(first|next)" => FETCH_FIRST,
+  r"(?i)filter" => FILTER,
   r"(?i)flatten" => FLATTEN,
   r"(?i)float" => FLOAT,
   r"(?i)for" => FOR,
@@ -943,6 +957,7 @@ match {
   r"(?i)position" => POSITION,
   r"(?i)precision" => PRECISION,
   r"(?i)real" => REAL,
+  r"(?i)reduce" => REDUCE,
   r"(?i)regex" => REGEX,
   r"(?i)right" => RIGHT,
   r"(?i)rows?\s+only" => ROWS_ONLY,
