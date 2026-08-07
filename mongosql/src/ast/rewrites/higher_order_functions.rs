@@ -339,7 +339,33 @@ impl FunctionArgumentVisitor {
             FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
                 FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg))
             }
-            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+            // Exhaustively match other BinaryOps so in the future if we add new binary operators
+            // with overloaded forms, we will be forced to handle them here.
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::And))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Concat))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Div))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::In))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Mul))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::NotIn))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Or))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Eq),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Gt),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Gte),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Lt),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Lte),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Neq),
+            )) => {
                 self.error = Some(Error::IncorrectArgumentCount {
                     name: op.as_str(),
                     required: ArgCount::Exactly(2),
@@ -369,7 +395,9 @@ impl FunctionArgumentVisitor {
             FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg)) => {
                 FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(BinaryOp::Sub))
             }
-            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+            // Exhaustively match other UnaryOps so in the future if we add new unary operators
+            // with overloaded forms, we will be forced to handle them here.
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op @ UnaryOp::Not)) => {
                 self.error = Some(Error::IncorrectArgumentCount {
                     name: op.as_str(),
                     required: ArgCount::Exactly(1),
