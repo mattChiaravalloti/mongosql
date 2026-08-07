@@ -37,14 +37,14 @@ test_algebrize!(
         sort_specs: vec![
             ast::SortSpec {
                 key: ast::SortKey::Simple(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string()
                 })),
                 direction: ast::SortDirection::Asc
             },
             ast::SortSpec {
                 key: ast::SortKey::Simple(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "b".to_string()
                 })),
                 direction: ast::SortDirection::Desc
@@ -90,7 +90,7 @@ test_algebrize!(
     input = Some(ast::OrderByClause {
         sort_specs: vec![ast::SortSpec {
             key: ast::SortKey::Simple(ast::Expression::Subpath(ast::SubpathExpr {
-                expr: Box::new(ast::Expression::Identifier("arr".to_string())),
+                expr: Box::new(ast::Expression::Identifier("arr".into())),
                 subpath: "a".to_string()
             })),
             direction: ast::SortDirection::Asc

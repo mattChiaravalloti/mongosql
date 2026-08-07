@@ -156,7 +156,7 @@ mod subpath_field_tests {
         expected = vec![vec!["a", "b"]],
         input = build_select_query!(SelectBody::Standard(vec![SelectExpression::Expression(
             OptionallyAliasedExpr::Unaliased(Subpath(SubpathExpr {
-                expr: Box::new(Identifier("a".to_string(),)),
+                expr: Box::new(Identifier("a".into(),)),
                 subpath: "b".to_string(),
             },),),
         ),])),
@@ -168,7 +168,7 @@ mod subpath_field_tests {
         input = build_select_query!(SelectBody::Standard(vec![SelectExpression::Expression(
             OptionallyAliasedExpr::Unaliased(Subpath(SubpathExpr {
                 expr: Box::new(Subpath(SubpathExpr {
-                    expr: Box::new(Identifier("a".to_string(),)),
+                    expr: Box::new(Identifier("a".into(),)),
                     subpath: "b".to_string(),
                 },)),
                 subpath: "c".to_string(),
@@ -184,7 +184,7 @@ mod subpath_field_tests {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
                     OptionallyAliasedExpr::Unaliased(Subpath(SubpathExpr {
-                        expr: Box::new(Identifier("a".to_string(),)),
+                        expr: Box::new(Identifier("a".into(),)),
                         subpath: "b".to_string(),
                     },),),
                 ),]),
@@ -203,12 +203,12 @@ mod subpath_field_tests {
                 },)),
                 condition: Some(Binary(BinaryExpr {
                     left: Box::from(Subpath(SubpathExpr {
-                        expr: Box::new(Identifier("c".to_string(),)),
+                        expr: Box::new(Identifier("c".into(),)),
                         subpath: "d".to_string(),
                     },)),
                     op: BinaryOp::Comparison(ComparisonOp::Eq,),
                     right: Box::from(Subpath(SubpathExpr {
-                        expr: Box::new(Identifier("e".to_string(),)),
+                        expr: Box::new(Identifier("e".into(),)),
                         subpath: "f".to_string(),
                     },)),
                 },),),

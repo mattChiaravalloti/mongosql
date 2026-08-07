@@ -3,7 +3,7 @@ mod fuzz_test {
     use crate::{
         ast::{
             definitions::*,
-            pretty_print::PrettyPrint,
+            pretty_print::{ident_needs_delimiters, PrettyPrint},
             rewrites::{Pass, SingleTupleRewritePass},
         },
         parser,
@@ -72,6 +72,7 @@ Reparsed AST:
 
 mod arbitrary {
     use crate::ast::definitions::*;
+    use crate::ast::pretty_print::ident_needs_delimiters;
     use quickcheck::{Arbitrary, Gen};
     use rand::{rng, RngExt as _};
 
@@ -127,6 +128,10 @@ mod arbitrary {
     /// it just uses arbitrary_string, but this allows us to fine tune
     /// easily if we decide to use different rules for identifiers from
     /// strings.
+    /// Note that this is useful for contexts where you need an "identifier"
+    /// with a lowercase "i" -- as in, not an actual IdentifierExpr. For
+    /// example, a collection name in a CollectionSource. Only IdentifierExprs
+    /// retain delimiter information.
     fn arbitrary_identifier(g: &mut Gen) -> String {
         arbitrary_string(g)
     }
@@ -140,7 +145,7 @@ mod arbitrary {
         if bool::arbitrary(g) {
             Expression::Literal(Literal::arbitrary(g))
         } else {
-            Expression::Identifier(arbitrary_identifier(g))
+            Expression::Identifier(IdentifierExpr::arbitrary(g))
         }
     }
 
@@ -636,7 +641,7 @@ mod arbitrary {
                 ),
                 14 => Self::Access(AccessExpr::arbitrary(nested_g)),
                 15 => Self::Subpath(SubpathExpr::arbitrary(nested_g)),
-                16 => Self::Identifier(arbitrary_identifier(g)),
+                16 => Self::Identifier(IdentifierExpr::arbitrary(g)),
                 17 => Self::Is(IsExpr::arbitrary(nested_g)),
                 18 => Self::Like(LikeExpr::arbitrary(nested_g)),
                 19 => Self::Literal(Literal::arbitrary(nested_g)),
@@ -1008,9 +1013,17 @@ mod arbitrary {
         //     the parser rejecting expressions like 1.a, for example
         fn arbitrary(g: &mut Gen) -> Self {
             Self {
-                expr: Box::new(Expression::Identifier(arbitrary_identifier(g))),
+                expr: Box::new(Expression::Identifier(IdentifierExpr::arbitrary(g))),
                 subpath: arbitrary_identifier(g),
             }
+        }
+    }
+
+    impl Arbitrary for IdentifierExpr {
+        fn arbitrary(g: &mut Gen) -> Self {
+            let name = arbitrary_identifier(g);
+            let is_delimited = ident_needs_delimiters(name.as_str()) || bool::arbitrary(g);
+            Self { name, is_delimited }
         }
     }
 
@@ -1152,7 +1165,7 @@ mod arbitrary {
                 1 => {
                     let rng = &(0..2).collect::<Vec<i32>>();
                     Self::Simple(match g.choose(rng).unwrap() {
-                        0 => Expression::Identifier(arbitrary_identifier(g)),
+                        0 => Expression::Identifier(IdentifierExpr::arbitrary(g)),
                         1 => Expression::Subpath(SubpathExpr::arbitrary(g)),
                         _ => panic!(),
                     })

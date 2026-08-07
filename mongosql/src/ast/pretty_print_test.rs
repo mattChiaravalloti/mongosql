@@ -537,7 +537,11 @@ mod identifier {
         input = "`fo.o` - (bar / `$car`)"
     );
     expression_printer_test!(starts_with_number, expected = "`1foo`", input = "`1foo`");
-    expression_printer_test!(starts_with_underscore, expected = "_foo", input = "`_foo`");
+    expression_printer_test!(
+        starts_with_underscore,
+        expected = "`_foo`",
+        input = "`_foo`"
+    );
     expression_printer_test!(
         regular_identifier_containing_number,
         expected = "foo1",
@@ -545,6 +549,11 @@ mod identifier {
     );
     expression_printer_test!(empty, expected = "``", input = "``");
     expression_printer_test!(is_keyword, expected = "`is`", input = "`is`");
+    expression_printer_test!(
+        delimited_non_keyword_retains_delimiters,
+        expected = "`foo`",
+        input = "`foo`"
+    );
 }
 
 mod is {

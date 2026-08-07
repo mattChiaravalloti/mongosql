@@ -115,7 +115,11 @@ lazy_static! {
 }
 
 fn identifier_to_string(s: &str) -> String {
-    if ident_needs_delimiters(s) {
+    identifier_to_string_with_delimiter_info(s, false)
+}
+
+fn identifier_to_string_with_delimiter_info(s: &str, is_delimited: bool) -> String {
+    if is_delimited || ident_needs_delimiters(s) {
         format!("`{}`", s.replace('`', "``"))
     } else {
         s.to_string()
@@ -785,7 +789,7 @@ impl PrettyPrint for Expression {
     fn pretty_print(&self) -> Result<String> {
         use Expression::*;
         match self {
-            Identifier(s) => Ok(identifier_to_string(s)),
+            Identifier(i) => i.pretty_print(),
             Is(i) => i.pretty_print(),
             Like(l) => l.pretty_print(),
             TypeAssertion(t) => t.pretty_print(),
@@ -833,6 +837,15 @@ impl PrettyPrint for Expression {
             HigherOrderFunction(hof) => hof.pretty_print(),
             ArrayCast(ac) => ac.pretty_print(),
         }
+    }
+}
+
+impl PrettyPrint for IdentifierExpr {
+    fn pretty_print(&self) -> Result<String> {
+        Ok(identifier_to_string_with_delimiter_info(
+            self.name.as_str(),
+            self.is_delimited,
+        ))
     }
 }
 
@@ -1140,7 +1153,7 @@ impl PrettyPrint for WhenBranch {
     }
 }
 
-fn ident_needs_delimiters(s: &str) -> bool {
+pub(crate) fn ident_needs_delimiters(s: &str) -> bool {
     if s.is_empty() {
         return true;
     }

@@ -90,7 +90,7 @@ impl Visitor for MatchingAliasFinder {
         for expr in group_by.keys.iter() {
             if let ast::OptionallyAliasedExpr::Unaliased(ast::Expression::Identifier(ident)) = expr
             {
-                self.group_key_identifiers.push(ident.clone());
+                self.group_key_identifiers.push(ident.name.clone());
             }
         }
         group_by
@@ -121,7 +121,7 @@ impl Visitor for Rewriter {
                 ast::AliasedExpr { alias, .. },
             )) if self.select_exprs_by_group_key_ident.contains_key(&alias) => {
                 ast::SelectExpression::Expression(ast::OptionallyAliasedExpr::Unaliased(
-                    ast::Expression::Identifier(alias),
+                    ast::Expression::Identifier(alias.into()),
                 ))
             }
             _ => select_expr,
@@ -138,7 +138,7 @@ impl Visitor for Rewriter {
             .into_iter()
             .map(|expr| match expr {
                 ast::OptionallyAliasedExpr::Unaliased(ast::Expression::Identifier(ref ident)) => {
-                    if let Some(ae) = self.select_exprs_by_group_key_ident.get(ident) {
+                    if let Some(ae) = self.select_exprs_by_group_key_ident.get(&ident.name) {
                         ast::OptionallyAliasedExpr::Aliased(ae.clone())
                     } else {
                         expr

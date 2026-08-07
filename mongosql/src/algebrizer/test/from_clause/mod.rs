@@ -801,9 +801,9 @@ test_algebrize!(
             alias: "bar".into(),
         })),
         condition: Some(ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("a".to_string())),
+            left: Box::new(ast::Expression::Identifier("a".into())),
             op: ast::BinaryOp::Comparison(ast::ComparisonOp::Eq),
-            right: Box::new(ast::Expression::Identifier("b".to_string())),
+            right: Box::new(ast::Expression::Identifier("b".into())),
         }))
     })),
 );

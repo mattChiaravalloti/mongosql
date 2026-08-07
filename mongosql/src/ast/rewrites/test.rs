@@ -1675,18 +1675,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Not,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
                 )),
@@ -1705,18 +1705,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Pos,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Add)
                 )),
@@ -1729,18 +1729,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Neg,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Sub)
                 )),
@@ -1759,7 +1759,7 @@ mod higher_order_functions {
         }),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Mul)
                 )),
@@ -1776,12 +1776,12 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
                     ast::FunctionExpr {
                         function: ast::FunctionName::Upper,
                         args: ast::FunctionArguments::Args(vec![ast::Expression::Identifier(
-                            "this".to_string()
+                            "this".into()
                         )]),
                         set_quantifier: None,
                     }
@@ -1790,7 +1790,7 @@ mod higher_order_functions {
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::Function(ast::FunctionName::Upper)
                 )),
@@ -1803,18 +1803,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Not,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
                 )),
@@ -1832,18 +1832,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Pos,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Add)
                 )),
@@ -1856,18 +1856,18 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Unary(
                     ast::UnaryExpr {
                         op: ast::UnaryOp::Neg,
-                        expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                        expr: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Sub)
                 )),
@@ -1885,7 +1885,7 @@ mod higher_order_functions {
         }),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Comparison(ast::ComparisonOp::Eq))
                 )),
@@ -1898,12 +1898,12 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
                     ast::FunctionExpr {
                         function: ast::FunctionName::Coalesce,
                         args: ast::FunctionArguments::Args(vec![ast::Expression::Identifier(
-                            "this".to_string()
+                            "this".into()
                         )]),
                         set_quantifier: None,
                     }
@@ -1912,7 +1912,7 @@ mod higher_order_functions {
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Filter(ast::FilterExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::Function(ast::FunctionName::Coalesce)
                 )),
@@ -1930,7 +1930,7 @@ mod higher_order_functions {
         }),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::UnaryOp(ast::UnaryOp::Not)
@@ -1946,20 +1946,20 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
                         op: ast::BinaryOp::Add,
-                        left: Box::new(ast::Expression::Identifier("value".to_string())),
-                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier(("value", true).into())),
+                        right: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::UnaryOp(ast::UnaryOp::Pos)
@@ -1973,20 +1973,20 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
                         op: ast::BinaryOp::Sub,
-                        left: Box::new(ast::Expression::Identifier("value".to_string())),
-                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier(("value", true).into())),
+                        right: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::UnaryOp(ast::UnaryOp::Neg)
@@ -2000,20 +2000,20 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
                         op: ast::BinaryOp::Div,
-                        left: Box::new(ast::Expression::Identifier("value".to_string())),
-                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier(("value", true).into())),
+                        right: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::BinaryOp(ast::BinaryOp::Div)
@@ -2027,14 +2027,14 @@ mod higher_order_functions {
         pass = HigherOrderFunctionsRewritePass,
         expected = Ok(make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Function(
                     ast::FunctionExpr {
                         function: ast::FunctionName::Pow,
                         args: ast::FunctionArguments::Args(vec![
-                            ast::Expression::Identifier("value".to_string()),
-                            ast::Expression::Identifier("this".to_string()),
+                            ast::Expression::Identifier(("value", true).into()),
+                            ast::Expression::Identifier("this".into()),
                         ]),
                         set_quantifier: None,
                     }
@@ -2043,7 +2043,7 @@ mod higher_order_functions {
         ))),
         input = make_select_query(ast::Expression::HigherOrderFunction(
             ast::HigherOrderFunctionExpr::Reduce(ast::ReduceExpr {
-                array: Box::new(ast::Expression::Identifier("a".to_string())),
+                array: Box::new(ast::Expression::Identifier("a".into())),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(0))),
                 f: Box::new(ast::FunctionArgument::NamedFunction(
                     ast::NamedFunction::Function(ast::FunctionName::Pow)

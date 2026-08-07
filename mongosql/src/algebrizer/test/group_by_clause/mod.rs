@@ -84,7 +84,7 @@ lazy_static! {
     // GROUP BY KEYS
     static ref AST_SUBPATH: ast::OptionallyAliasedExpr = ast::OptionallyAliasedExpr::Aliased(ast::AliasedExpr {
         expr: ast::Expression::Subpath(ast::SubpathExpr {
-            expr: Box::new(ast::Expression::Identifier("arr".to_string())),
+            expr: Box::new(ast::Expression::Identifier("arr".into())),
             subpath: "a".to_string()
         }),
         alias: "key".to_string(),
@@ -100,7 +100,7 @@ lazy_static! {
     static ref AST_SUBPATH_COMPLEX_EXPR: ast::OptionallyAliasedExpr = ast::OptionallyAliasedExpr::Aliased(ast::AliasedExpr {
         expr: ast::Expression::Binary(ast::BinaryExpr {
             left: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                expr: Box::new(ast::Expression::Identifier("arr".to_string())),
+                expr: Box::new(ast::Expression::Identifier("arr".into())),
                 subpath: "a".to_string()
             })),
             op: ast::BinaryOp::Add,
@@ -117,7 +117,7 @@ lazy_static! {
             function: ast::FunctionName::Avg,
             args: ast::FunctionArguments::Args(vec![
                 ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("arr".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("arr".into())),
                     subpath: "a".to_string()
                 })
             ]),

@@ -296,7 +296,7 @@ pub enum Expression {
     Document(Vec<DocumentPair>),
     Access(AccessExpr),
     Subpath(SubpathExpr),
-    Identifier(String),
+    Identifier(IdentifierExpr),
     Is(IsExpr),
     Like(LikeExpr),
     Literal(Literal),
@@ -309,7 +309,7 @@ pub enum Expression {
 impl Expression {
     pub fn into_date_part(self) -> Option<DatePart> {
         match self {
-            Expression::Identifier(i) => i.as_str().try_into().ok(),
+            Expression::Identifier(IdentifierExpr { name: i, .. }) => i.as_str().try_into().ok(),
             _ => None
         }
     }
@@ -845,6 +845,48 @@ pub struct AccessExpr {
 pub struct SubpathExpr {
     pub expr: Box<Expression>,
     pub subpath: String,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct IdentifierExpr {
+    pub name: String,
+    pub is_delimited: bool,
+}
+
+impl From<&str> for IdentifierExpr {
+    fn from(name: &str) -> Self {
+        IdentifierExpr {
+            name: name.to_string(),
+            is_delimited: false,
+        }
+    }
+}
+
+impl From<(&str, bool)> for IdentifierExpr {
+    fn from((name, is_delimited): (&str, bool)) -> Self {
+        IdentifierExpr {
+            name: name.to_string(),
+            is_delimited,
+        }
+    }
+}
+
+impl From<String> for IdentifierExpr {
+    fn from(name: String) -> Self {
+        IdentifierExpr {
+            name: name.clone(),
+            is_delimited: false,
+        }
+    }
+}
+
+impl From<(String, bool)> for IdentifierExpr {
+    fn from((name, is_delimited): (String, bool)) -> Self {
+        IdentifierExpr {
+            name: name.clone(),
+            is_delimited,
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]

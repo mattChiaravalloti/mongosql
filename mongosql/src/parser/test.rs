@@ -198,7 +198,7 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()))
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()))
                 )])
             },
             from_clause: None,
@@ -218,7 +218,7 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier(("foo", true).into()),)
                 )])
             },
             from_clause: None,
@@ -238,7 +238,7 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier(("foo", true).into()),)
                 )])
             },
             from_clause: None,
@@ -258,7 +258,9 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("1 + 2".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier(
+                        ("1 + 2", true).into()
+                    ),)
                 )])
             },
             from_clause: None,
@@ -278,7 +280,9 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("fo`o``".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier(
+                        ("fo`o``", true).into()
+                    ),)
                 )])
             },
             from_clause: None,
@@ -299,7 +303,7 @@ mod select {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
                     OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                        r#"fo"o"""#.to_string()
+                        (r#"fo"o"""#, true).into()
                     ),)
                 )])
             },
@@ -321,7 +325,7 @@ mod select {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
                     OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                        r#"fo""o"#.to_string()
+                        (r#"fo""o"#, true).into()
                     ),)
                 )])
             },
@@ -342,7 +346,9 @@ mod select {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("fo``o".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier(
+                        ("fo``o", true).into()
+                    ))
                 )])
             },
             from_clause: None,
@@ -399,9 +405,7 @@ mod query {
                     select_clause: SelectClause {
                         set_quantifier: SetQuantifier::All,
                         body: SelectBody::Standard(vec![SelectExpression::Expression(
-                            OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                                "a".to_string()
-                            ),)
+                            OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".into()))
                         )])
                     },
                     from_clause: None,
@@ -417,9 +421,7 @@ mod query {
                     select_clause: SelectClause {
                         set_quantifier: SetQuantifier::All,
                         body: SelectBody::Standard(vec![SelectExpression::Expression(
-                            OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                                "b".to_string()
-                            ),)
+                            OptionallyAliasedExpr::Unaliased(Expression::Identifier("b".into()))
                         )])
                     },
                     from_clause: None,
@@ -436,7 +438,7 @@ mod query {
                 select_clause: SelectClause {
                     set_quantifier: SetQuantifier::All,
                     body: SelectBody::Standard(vec![SelectExpression::Expression(
-                        OptionallyAliasedExpr::Unaliased(Expression::Identifier("c".to_string()),)
+                        OptionallyAliasedExpr::Unaliased(Expression::Identifier("c".into()))
                     )])
                 },
                 from_clause: None,
@@ -604,7 +606,7 @@ mod operator {
         is_missing_ast,
         method = parse_expression,
         expected = Expression::Is(IsExpr {
-            expr: Box::new(Expression::Identifier("a".to_string())),
+            expr: Box::new(Expression::Identifier("a".into())),
             target_type: TypeOrMissing::Missing,
         }),
         input = "a IS MISSING",
@@ -650,9 +652,9 @@ mod operator {
         between_ast,
         method = parse_expression,
         expected = Expression::Between(BetweenExpr {
-            arg: Box::new(Expression::Identifier("a".to_string())),
-            min: Box::new(Expression::Identifier("b".to_string())),
-            max: Box::new(Expression::Identifier("c".to_string())),
+            arg: Box::new(Expression::Identifier("a".into())),
+            min: Box::new(Expression::Identifier("b".into())),
+            max: Box::new(Expression::Identifier("c".into())),
         }),
         input = "a between b and c",
     );
@@ -663,9 +665,9 @@ mod operator {
         expected = Expression::Unary(UnaryExpr {
             op: UnaryOp::Not,
             expr: Box::new(Expression::Between(BetweenExpr {
-                arg: Box::new(Expression::Identifier("a".to_string())),
-                min: Box::new(Expression::Identifier("b".to_string())),
-                max: Box::new(Expression::Identifier("c".to_string())),
+                arg: Box::new(Expression::Identifier("a".into())),
+                min: Box::new(Expression::Identifier("b".into())),
+                max: Box::new(Expression::Identifier("c".into())),
             }))
         }),
         input = "a not between b and c",
@@ -679,22 +681,22 @@ mod operator {
             when_branch: vec![
                 WhenBranch {
                     when: Box::new(Expression::Binary(BinaryExpr {
-                        left: Box::new(Expression::Identifier("a".to_string())),
+                        left: Box::new(Expression::Identifier("a".into())),
                         op: BinaryOp::Comparison(ComparisonOp::Eq),
-                        right: Box::new(Expression::Identifier("b".to_string()))
+                        right: Box::new(Expression::Identifier("b".into()))
                     })),
-                    then: Box::new(Expression::Identifier("a".to_string()))
+                    then: Box::new(Expression::Identifier("a".into()))
                 },
                 WhenBranch {
                     when: Box::new(Expression::Binary(BinaryExpr {
-                        left: Box::new(Expression::Identifier("c".to_string())),
+                        left: Box::new(Expression::Identifier("c".into())),
                         op: BinaryOp::Comparison(ComparisonOp::Eq),
-                        right: Box::new(Expression::Identifier("d".to_string()))
+                        right: Box::new(Expression::Identifier("d".into()))
                     })),
-                    then: Box::new(Expression::Identifier("c".to_string()))
+                    then: Box::new(Expression::Identifier("c".into()))
                 }
             ],
-            else_branch: Some(Box::new(Expression::Identifier("e".to_string())))
+            else_branch: Some(Box::new(Expression::Identifier("e".into())))
         }),
         input = "case when a=b then a when c=d then c else e end",
     );
@@ -703,16 +705,16 @@ mod operator {
         case_multiple_exprs_ast,
         method = parse_expression,
         expected = Expression::Case(CaseExpr {
-            expr: Some(Box::new(Expression::Identifier("a".to_string()))),
+            expr: Some(Box::new(Expression::Identifier("a".into()))),
             when_branch: vec![WhenBranch {
                 when: Box::new(Expression::Binary(BinaryExpr {
-                    left: Box::new(Expression::Identifier("a".to_string())),
+                    left: Box::new(Expression::Identifier("a".into())),
                     op: BinaryOp::Comparison(ComparisonOp::Eq),
-                    right: Box::new(Expression::Identifier("b".to_string()))
+                    right: Box::new(Expression::Identifier("b".into()))
                 })),
-                then: Box::new(Expression::Identifier("a".to_string()))
+                then: Box::new(Expression::Identifier("a".into()))
             }],
-            else_branch: Some(Box::new(Expression::Identifier("c".to_string())))
+            else_branch: Some(Box::new(Expression::Identifier("c".into())))
         }),
         input = "case a when a=b then a else c end",
     );
@@ -726,12 +728,12 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Between(BetweenExpr {
             arg: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Comparison(ComparisonOp::Eq),
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
-            min: Box::new(Expression::Identifier("c".to_string())),
-            max: Box::new(Expression::Identifier("d".to_string()))
+            min: Box::new(Expression::Identifier("c".into())),
+            max: Box::new(Expression::Identifier("d".into()))
         }),
         input = "a = b BETWEEN c AND d",
     );
@@ -741,14 +743,14 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Between(BetweenExpr {
-                arg: Box::new(Expression::Identifier("a".to_string())),
-                min: Box::new(Expression::Identifier("b".to_string())),
-                max: Box::new(Expression::Identifier("c".to_string()))
+                arg: Box::new(Expression::Identifier("a".into())),
+                min: Box::new(Expression::Identifier("b".into())),
+                max: Box::new(Expression::Identifier("c".into()))
             })),
             op: BinaryOp::In,
             right: Box::new(Expression::Tuple(vec![
-                Expression::Identifier("x".to_string()),
-                Expression::Identifier("y".to_string())
+                Expression::Identifier("x".into()),
+                Expression::Identifier("y".into())
             ]))
         }),
         input = "a BETWEEN b AND c IN (x, y)",
@@ -758,13 +760,13 @@ mod operator_precedence {
         in_binds_more_tightly_than_like,
         method = parse_expression,
         expected = Expression::Like(LikeExpr {
-            expr: Box::new(Expression::Identifier("a".to_string())),
+            expr: Box::new(Expression::Identifier("a".into())),
             pattern: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("x".to_string())),
+                left: Box::new(Expression::Identifier("x".into())),
                 op: BinaryOp::In,
                 right: Box::new(Expression::Tuple(vec![
-                    Expression::Identifier("y".to_string()),
-                    Expression::Identifier("z".to_string()),
+                    Expression::Identifier("y".into()),
+                    Expression::Identifier("z".into()),
                 ]))
             })),
             escape: None
@@ -777,8 +779,8 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Is(IsExpr {
             expr: Box::new(Expression::Like(LikeExpr {
-                expr: Box::new(Expression::Identifier("a".to_string())),
-                pattern: Box::new(Expression::Identifier("b".to_string())),
+                expr: Box::new(Expression::Identifier("a".into())),
+                pattern: Box::new(Expression::Identifier("b".into())),
                 escape: None,
             })),
             target_type: TypeOrMissing::Type(Type::Null)
@@ -792,7 +794,7 @@ mod operator_precedence {
         expected = Expression::Unary(UnaryExpr {
             op: UnaryOp::Not,
             expr: Box::new(Expression::Is(IsExpr {
-                expr: Box::new(Expression::Identifier("a".to_string())),
+                expr: Box::new(Expression::Identifier("a".into())),
                 target_type: TypeOrMissing::Type(Type::Null)
             }))
         }),
@@ -805,10 +807,10 @@ mod operator_precedence {
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Unary(UnaryExpr {
                 op: UnaryOp::Not,
-                expr: Box::new(Expression::Identifier("a".to_string())),
+                expr: Box::new(Expression::Identifier("a".into())),
             })),
             op: BinaryOp::And,
-            right: Box::new(Expression::Identifier("b".to_string()))
+            right: Box::new(Expression::Identifier("b".into()))
         }),
         input = "NOT a AND b",
     );
@@ -818,12 +820,12 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::And,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
             op: BinaryOp::Or,
-            right: Box::new(Expression::Identifier("c".to_string()))
+            right: Box::new(Expression::Identifier("c".into()))
         }),
         input = "a AND b OR c",
     );
@@ -834,9 +836,9 @@ mod operator_precedence {
         expected = Expression::Unary(UnaryExpr {
             op: UnaryOp::Not,
             expr: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Mul,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             }))
         }),
         input = "NOT a * b",
@@ -846,11 +848,11 @@ mod operator_precedence {
         unary_binds_more_tightly_than_binary_sub,
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
-            left: Box::new(Expression::Identifier("b".to_string())),
+            left: Box::new(Expression::Identifier("b".into())),
             op: BinaryOp::Sub,
             right: Box::new(Expression::Unary(UnaryExpr {
                 op: UnaryOp::Neg,
-                expr: Box::new(Expression::Identifier("a".to_string()))
+                expr: Box::new(Expression::Identifier("a".into()))
             }))
         }),
         input = "b- -a",
@@ -862,10 +864,10 @@ mod operator_precedence {
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Unary(UnaryExpr {
                 op: UnaryOp::Neg,
-                expr: Box::new(Expression::Identifier("a".to_string()))
+                expr: Box::new(Expression::Identifier("a".into()))
             })),
             op: BinaryOp::Div,
-            right: Box::new(Expression::Identifier("b".to_string()))
+            right: Box::new(Expression::Identifier("b".into()))
         }),
         input = "-a/b",
     );
@@ -875,15 +877,15 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Mul,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
             op: BinaryOp::Add,
             right: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("x".to_string())),
+                left: Box::new(Expression::Identifier("x".into())),
                 op: BinaryOp::Mul,
-                right: Box::new(Expression::Identifier("y".to_string()))
+                right: Box::new(Expression::Identifier("y".into()))
             }))
         }),
         input = "a*b+x*y",
@@ -894,15 +896,15 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Div,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
             op: BinaryOp::Sub,
             right: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("x".to_string())),
+                left: Box::new(Expression::Identifier("x".into())),
                 op: BinaryOp::Div,
-                right: Box::new(Expression::Identifier("y".to_string()))
+                right: Box::new(Expression::Identifier("y".into()))
             }))
         }),
         input = "a/b-x/y",
@@ -913,12 +915,12 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Add,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
             op: BinaryOp::Concat,
-            right: Box::new(Expression::Identifier("c".to_string()))
+            right: Box::new(Expression::Identifier("c".into()))
         }),
         input = "a+b||c",
     );
@@ -927,12 +929,12 @@ mod operator_precedence {
         binary_concat_compare_ast,
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
-            left: Box::new(Expression::Identifier("c".to_string())),
+            left: Box::new(Expression::Identifier("c".into())),
             op: BinaryOp::Comparison(ComparisonOp::Gt),
             right: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Concat,
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             }))
         }),
         input = "c>a||b",
@@ -943,12 +945,12 @@ mod operator_precedence {
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
             left: Box::new(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Comparison(ComparisonOp::Lt),
-                right: Box::new(Expression::Identifier("b".to_string()))
+                right: Box::new(Expression::Identifier("b".into()))
             })),
             op: BinaryOp::And,
-            right: Box::new(Expression::Identifier("c".to_string()))
+            right: Box::new(Expression::Identifier("c".into()))
         }),
         input = "a<b AND c",
     );
@@ -957,10 +959,10 @@ mod operator_precedence {
         cast_precedence_binary,
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
-            left: Box::new(Expression::Identifier("a".to_string())),
+            left: Box::new(Expression::Identifier("a".into())),
             op: BinaryOp::Mul,
             right: Box::new(Expression::Cast(CastExpr {
-                expr: Box::new(Expression::Identifier("b".to_string())),
+                expr: Box::new(Expression::Identifier("b".into())),
                 to: Type::Int32,
                 on_null: None,
                 on_error: None,
@@ -974,7 +976,7 @@ mod operator_precedence {
         expected = Expression::Unary(UnaryExpr {
             op: UnaryOp::Not,
             expr: Box::new(Expression::Cast(CastExpr {
-                expr: Box::new(Expression::Identifier("a".to_string())),
+                expr: Box::new(Expression::Identifier("a".into())),
                 to: Type::Boolean,
                 on_null: None,
                 on_error: None,
@@ -1053,15 +1055,13 @@ mod group_by {
             where_clause: None,
             group_by_clause: Some(GroupByClause {
                 keys: vec![
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".to_string())),
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("b".to_string()))
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".into())),
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("b".into()))
                 ],
                 aggregations: vec![AliasedExpr {
                     expr: Expression::Function(FunctionExpr {
                         function: FunctionName::Sum,
-                        args: FunctionArguments::Args(vec![Expression::Identifier(
-                            "b".to_string()
-                        )]),
+                        args: FunctionArguments::Args(vec![Expression::Identifier("b".into())]),
                         set_quantifier: Some(SetQuantifier::Distinct),
                     }),
                     alias: "c".to_string(),
@@ -1103,14 +1103,14 @@ mod having {
             where_clause: None,
             group_by_clause: Some(GroupByClause {
                 keys: vec![OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                    "a".to_string()
+                    "a".into()
                 ),)],
                 aggregations: vec![]
             }),
             having_clause: Some(Expression::Binary(BinaryExpr {
                 left: Box::new(Expression::Function(FunctionExpr {
                     function: FunctionName::Sum,
-                    args: FunctionArguments::Args(vec![Expression::Identifier("a".to_string())]),
+                    args: FunctionArguments::Args(vec![Expression::Identifier("a".into())]),
                     set_quantifier: Some(SetQuantifier::Distinct),
                 })),
                 op: BinaryOp::Comparison(ComparisonOp::Gt),
@@ -1170,7 +1170,7 @@ mod order_by {
             having_clause: None,
             order_by_clause: Some(OrderByClause {
                 sort_specs: vec![SortSpec {
-                    key: SortKey::Simple(Expression::Identifier("a".to_string())),
+                    key: SortKey::Simple(Expression::Identifier("a".into())),
                     direction: SortDirection::Asc
                 }]
             }),
@@ -1839,15 +1839,15 @@ mod scalar_function {
             function: FunctionName::Position,
             args: FunctionArguments::Args(vec![
                 Expression::Tuple(vec![Expression::Binary(BinaryExpr {
-                    left: Box::new(Expression::Identifier("a".to_string())),
+                    left: Box::new(Expression::Identifier("a".into())),
                     op: BinaryOp::Add,
                     right: Box::new(Expression::Binary(BinaryExpr {
-                        left: Box::new(Expression::Identifier("b".to_string())),
+                        left: Box::new(Expression::Identifier("b".into())),
                         op: BinaryOp::Mul,
-                        right: Box::new(Expression::Identifier("c".to_string()))
+                        right: Box::new(Expression::Identifier("c".into()))
                     }))
                 })]),
-                Expression::Identifier("d".to_string()),
+                Expression::Identifier("d".into()),
             ]),
             set_quantifier: None,
         }),
@@ -1858,7 +1858,7 @@ mod scalar_function {
         method = parse_expression,
         expected = Expression::Extract(ExtractExpr {
             extract_spec: DatePart::Year,
-            arg: Box::new(Expression::Identifier("a".to_string()))
+            arg: Box::new(Expression::Identifier("a".into()))
         }),
         input = "extract(year from a)",
     );
@@ -1868,9 +1868,9 @@ mod scalar_function {
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::DateAdd,
             args: FunctionArguments::Args(vec![
-                Expression::Identifier("year".to_string()),
+                Expression::Identifier("year".into()),
                 Expression::Literal(Literal::Integer(5)),
-                Expression::Identifier("a".to_string())
+                Expression::Identifier("a".into())
             ]),
             set_quantifier: None,
         }),
@@ -1882,9 +1882,9 @@ mod scalar_function {
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::DateDiff,
             args: FunctionArguments::Args(vec![
-                Expression::Identifier("year".to_string()),
-                Expression::Identifier("a".to_string()),
-                Expression::Identifier("b".to_string()),
+                Expression::Identifier("year".into()),
+                Expression::Identifier("a".into()),
+                Expression::Identifier("b".into()),
             ]),
             set_quantifier: None,
         }),
@@ -1896,10 +1896,10 @@ mod scalar_function {
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::DateDiff,
             args: FunctionArguments::Args(vec![
-                Expression::Identifier("year".to_string()),
-                Expression::Identifier("a".to_string()),
-                Expression::Identifier("b".to_string()),
-                Expression::Identifier("wednesday".to_string())
+                Expression::Identifier("year".into()),
+                Expression::Identifier("a".into()),
+                Expression::Identifier("b".into()),
+                Expression::Identifier("wednesday".into())
             ]),
             set_quantifier: None,
         }),
@@ -1911,8 +1911,8 @@ mod scalar_function {
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::DateTrunc,
             args: FunctionArguments::Args(vec![
-                Expression::Identifier("year".to_string()),
-                Expression::Identifier("a".to_string()),
+                Expression::Identifier("year".into()),
+                Expression::Identifier("a".into()),
             ]),
             set_quantifier: None,
         }),
@@ -1924,9 +1924,9 @@ mod scalar_function {
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::DateTrunc,
             args: FunctionArguments::Args(vec![
-                Expression::Identifier("year".to_string()),
-                Expression::Identifier("a".to_string()),
-                Expression::Identifier("wednesday".to_string())
+                Expression::Identifier("year".into()),
+                Expression::Identifier("a".into()),
+                Expression::Identifier("wednesday".into())
             ]),
             set_quantifier: None,
         }),
@@ -1938,7 +1938,7 @@ mod scalar_function {
         expected = Expression::Trim(TrimExpr {
             trim_spec: TrimSpec::Both,
             trim_chars: Box::new(Expression::Identifier("substr".into())),
-            arg: Box::new(Expression::Identifier("str".to_string())),
+            arg: Box::new(Expression::Identifier("str".into())),
         }),
         input = "trim(substr FROM str)",
     );
@@ -1948,7 +1948,7 @@ mod scalar_function {
         expected = Expression::Trim(TrimExpr {
             trim_spec: TrimSpec::Leading,
             trim_chars: Box::new(Expression::StringConstructor(" ".into())),
-            arg: Box::new(Expression::Identifier("str".to_string())),
+            arg: Box::new(Expression::Identifier("str".into())),
         }),
         input = "trim(leading FROM str)",
     );
@@ -1958,7 +1958,7 @@ mod scalar_function {
         expected = Expression::Trim(TrimExpr {
             trim_spec: TrimSpec::Both,
             trim_chars: Box::new(Expression::StringConstructor(" ".into())),
-            arg: Box::new(Expression::Identifier("str".to_string())),
+            arg: Box::new(Expression::Identifier("str".into())),
         }),
         input = "trim(str)",
     );
@@ -1967,7 +1967,7 @@ mod scalar_function {
         method = parse_expression,
         expected = Expression::Function(FunctionExpr {
             function: FunctionName::Upper,
-            args: FunctionArguments::Args(vec![Expression::Identifier("a".to_string())]),
+            args: FunctionArguments::Args(vec![Expression::Identifier("a".into())]),
             set_quantifier: None,
         }),
         input = "upper(a)",
@@ -2461,7 +2461,7 @@ mod where_test {
             },
             from_clause: None,
             where_clause: Some(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("a".to_string())),
+                left: Box::new(Expression::Identifier("a".into())),
                 op: BinaryOp::Comparison(ComparisonOp::Gte),
                 right: Box::new(Expression::Literal(Literal::Integer(2)))
             })),
@@ -2903,7 +2903,7 @@ mod type_conversion {
         cast_to_decimal_ast,
         method = parse_expression,
         expected = Expression::Cast(CastExpr {
-            expr: Box::new(Expression::Identifier("v".to_string())),
+            expr: Box::new(Expression::Identifier("v".into())),
             to: Type::Decimal128,
             on_null: Some(Box::new(Expression::StringConstructor("null".to_string()))),
             on_error: Some(Box::new(Expression::StringConstructor("error".to_string()))),
@@ -2976,14 +2976,14 @@ mod subquery {
         some_subquery,
         method = parse_expression,
         expected = Expression::SubqueryComparison(SubqueryComparisonExpr {
-            expr: Box::new(Expression::Identifier("x".to_string())),
+            expr: Box::new(Expression::Identifier("x".into())),
             op: ComparisonOp::Neq,
             quantifier: SubqueryQuantifier::Any,
             subquery: Box::new(Query::Select(Box::new(SelectQuery {
                 select_clause: SelectClause {
                     set_quantifier: SetQuantifier::All,
                     body: SelectBody::Standard(vec![SelectExpression::Expression(
-                        OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".to_string()),)
+                        OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".into()),)
                     )])
                 },
                 from_clause: None,
@@ -3002,16 +3002,14 @@ mod subquery {
         in_subquery,
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
-            left: Box::new(Expression::Identifier("x".to_string())),
+            left: Box::new(Expression::Identifier("x".into())),
             op: BinaryOp::In,
             right: Box::new(Expression::Subquery(Box::new(Query::Select(Box::new(
                 SelectQuery {
                     select_clause: SelectClause {
                         set_quantifier: SetQuantifier::All,
                         body: SelectBody::Standard(vec![SelectExpression::Expression(
-                            OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                                "a".to_string()
-                            ),)
+                            OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".into()),)
                         )])
                     },
                     from_clause: None,
@@ -3031,16 +3029,14 @@ mod subquery {
         not_in_subquery,
         method = parse_expression,
         expected = Expression::Binary(BinaryExpr {
-            left: Box::new(Expression::Identifier("x".to_string())),
+            left: Box::new(Expression::Identifier("x".into())),
             op: BinaryOp::NotIn,
             right: Box::new(Expression::Subquery(Box::new(Query::Select(Box::new(
                 SelectQuery {
                     select_clause: SelectClause {
                         set_quantifier: SetQuantifier::All,
                         body: SelectBody::Standard(vec![SelectExpression::Expression(
-                            OptionallyAliasedExpr::Unaliased(Expression::Identifier(
-                                "a".to_string()
-                            ),)
+                            OptionallyAliasedExpr::Unaliased(Expression::Identifier("a".into()),)
                         )])
                     },
                     from_clause: None,
@@ -3151,7 +3147,7 @@ mod document {
         expected = Expression::Subpath(SubpathExpr {
             expr: Box::new(Expression::Access(AccessExpr {
                 expr: Box::new(Expression::Subpath(SubpathExpr {
-                    expr: Box::new(Expression::Identifier("a".to_string())),
+                    expr: Box::new(Expression::Identifier("a".into())),
                     subpath: "b".to_string()
                 })),
                 subfield: Box::new(Expression::StringConstructor("c".to_string())),
@@ -3214,7 +3210,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3235,7 +3231,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3257,7 +3253,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3278,7 +3274,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3301,7 +3297,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3323,7 +3319,7 @@ mod comments {
             select_clause: SelectClause {
                 set_quantifier: SetQuantifier::All,
                 body: SelectBody::Standard(vec![SelectExpression::Expression(
-                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".to_string()),)
+                    OptionallyAliasedExpr::Unaliased(Expression::Identifier("foo".into()),)
                 )])
             },
             from_clause: None,
@@ -3694,11 +3690,11 @@ mod higher_order_functions {
         map_with_expr_function_arg_ast,
         method = parse_expression,
         expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
-            array: Box::new(Expression::Identifier("a".to_string())),
+            array: Box::new(Expression::Identifier("a".into())),
             f: Box::new(FunctionArgument::Expr(Expression::Binary(BinaryExpr {
-                left: Box::new(Expression::Identifier("this".to_string())),
+                left: Box::new(Expression::Identifier("this".into())),
                 op: BinaryOp::Mul,
-                right: Box::new(Expression::Identifier("this".to_string())),
+                right: Box::new(Expression::Identifier("this".into())),
             }))),
         })),
         input = "map(a, this * this)",
@@ -3709,7 +3705,7 @@ mod higher_order_functions {
         map_with_named_function_pos_unary_op_arg_ast,
         method = parse_expression,
         expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
-            array: Box::new(Expression::Identifier("a".to_string())),
+            array: Box::new(Expression::Identifier("a".into())),
             f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
                 UnaryOp::Pos
             ))),
@@ -3722,7 +3718,7 @@ mod higher_order_functions {
         map_with_named_function_neg_unary_op_arg_ast,
         method = parse_expression,
         expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
-            array: Box::new(Expression::Identifier("a".to_string())),
+            array: Box::new(Expression::Identifier("a".into())),
             f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
                 UnaryOp::Neg
             ))),
@@ -3734,7 +3730,7 @@ mod higher_order_functions {
         map_with_named_function_binary_op_arg_ast,
         method = parse_expression,
         expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
-            array: Box::new(Expression::Identifier("a".to_string())),
+            array: Box::new(Expression::Identifier("a".into())),
             f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
                 BinaryOp::Div
             ))),
@@ -3746,11 +3742,24 @@ mod higher_order_functions {
         map_with_named_function_function_arg_ast,
         method = parse_expression,
         expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
-            array: Box::new(Expression::Identifier("a".to_string())),
+            array: Box::new(Expression::Identifier("a".into())),
             f: Box::new(FunctionArgument::NamedFunction(NamedFunction::Function(
                 FunctionName::Log10
             ))),
         })),
         input = "map(a, LOG10)",
+    );
+
+    // Note that if a function name is delimited, it is parsed as an Identifier.
+    validate_ast!(
+        map_with_delimited_named_function_function_arg_ast,
+        method = parse_expression,
+        expected = Expression::HigherOrderFunction(HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(Expression::Identifier("a".into())),
+            f: Box::new(FunctionArgument::Expr(Expression::Identifier(
+                ("LOG", true).into()
+            ))),
+        })),
+        input = "map(a, `LOG`)",
     );
 }

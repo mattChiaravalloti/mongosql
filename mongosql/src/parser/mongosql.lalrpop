@@ -27,7 +27,7 @@ WithQuery: Query = {
 
 NamedQuery: NamedQuery = {
   <i:Identifier> AS LEFT_PAREN <q:SimpleQuery> RIGHT_PAREN => NamedQuery {
-    name: i,
+    name: i.name,
     query: q,
   }
 }
@@ -113,24 +113,24 @@ UnwindDatasource: Datasource = {
 UnwindOption: ExtendedUnwindOption = {
   PATH ARROW <p:PeriodPlus<UnwindPathPart>> => ExtendedUnwindOption::Paths(vec![p]),
   PATH ARROW LEFT_PAREN <p:CommaPlus<PeriodPlus<UnwindPathPart>>> RIGHT_PAREN => ExtendedUnwindOption::Paths(p),
-  INDEX ARROW <i:Identifier> => ExtendedUnwindOption::Index(i),
+  INDEX ARROW <i:Identifier> => ExtendedUnwindOption::Index(i.name),
   OUTER ARROW <o:Boolean> => ExtendedUnwindOption::Outer(o)
 }
 
 // Only INDEX and OUTER are allowed on a PATH part. Putting a PATH in a PATH part
 // would be confusing
 UnwindPathPartOption: UnwindPathPartOption = {
-  INDEX ARROW <i:Identifier> => UnwindPathPartOption::Index(i),
+  INDEX ARROW <i:Identifier> => UnwindPathPartOption::Index(i.name),
   OUTER ARROW <o:Boolean> => UnwindPathPartOption::Outer(o)
 }
 
 UnwindPathPart: UnwindPathPart = {
     <i:Identifier> => UnwindPathPart {
-        field: i, 
+        field: i.name,
         options: Vec::default(),
     },
     <i:Identifier> <o:BracketList<CommaStar<UnwindPathPartOption>>> => UnwindPathPart {
-        field: i, 
+        field: i.name,
         options: o,
     }
 }
@@ -224,18 +224,18 @@ SelectExpression: SelectExpression = {
 OptionallyAliasedExpr: OptionallyAliasedExpr = {
   <e:Expression> <a:(AS? <Identifier>)?> => {
         match a {
-            Some(alias) => OptionallyAliasedExpr::Aliased(AliasedExpr{expr:e, alias}),
+            Some(alias) => OptionallyAliasedExpr::Aliased(AliasedExpr{expr:e, alias: alias.name}),
             None => OptionallyAliasedExpr::Unaliased(e),
         }
   }
 }
 
 AliasedExpr: AliasedExpr = {
-  <e:Expression> <a:(AS? <Identifier>)> => AliasedExpr{expr:e, alias:a}
+  <e:Expression> <a:(AS? <Identifier>)> => AliasedExpr{expr:e, alias:a.name}
 };
 
 SubstarExpr: SubstarExpr = {
-  <i:Identifier> DOT_STAR => SubstarExpr{datasource: i}
+  <i:Identifier> DOT_STAR => SubstarExpr{datasource: i.name}
 };
 
 pub Expression: Expression = {
@@ -427,7 +427,7 @@ FunctionArgument: FunctionArgument = {
     <e:Expression> => {
         // Check if this is a bare identifier that could be a function name
         match &e {
-            Expression::Identifier(id) => {
+            Expression::Identifier(IdentifierExpr { name: id, is_delimited: false }) => {
                 match FunctionName::try_from(id.as_str()) {
                     Ok(f) => FunctionArgument::NamedFunction(NamedFunction::Function(f)),
                     Err(_) => FunctionArgument::Expr(e),
@@ -483,10 +483,10 @@ AccessExpr: AccessExpr = {
   <e:Tier13Expr> LEFT_BRACKET <s:Expression> RIGHT_BRACKET => AccessExpr{expr:e, subfield:Box::new(s)},
 }
 
-Identifier: String = {
-  ID => <>.to_string(),
-  DELIMITED_IDENT_QUOTE => process_delimited_ident(<>),
-  DELIMITED_IDENT_BACKTICK => process_delimited_ident(<>),
+Identifier: IdentifierExpr = {
+  ID => (<>.to_string(), false).into(),
+  DELIMITED_IDENT_QUOTE => (process_delimited_ident(<>), true).into(),
+  DELIMITED_IDENT_BACKTICK => (process_delimited_ident(<>), true).into(),
 };
 
 // A tuple is a grouping of >= 1 elements, like (A), (A,B), (A,B,C), etc.
@@ -558,7 +558,7 @@ BetweenTier<Expr, NextTier>: Box<Expression> = {
 }
 
 SubpathTier<Expr, NextTier>: Box<Expression> = {
-  <expr:SubpathTier<Expr, NextTier>> DOT <subpath:Identifier> => Box::new(Expression::Subpath(SubpathExpr{<>})),
+  <expr:SubpathTier<Expr, NextTier>> DOT <subpath:Identifier> => Box::new(Expression::Subpath(SubpathExpr{expr, subpath: subpath.name})),
   NextTier
 };
 

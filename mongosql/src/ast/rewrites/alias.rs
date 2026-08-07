@@ -36,7 +36,7 @@ impl AddAliasRewriteVisitor {
                 expr: _,
                 ref subpath,
             }) => subpath.to_string(),
-            Expression::Identifier(ref id) => id.to_string(),
+            Expression::Identifier(IdentifierExpr { name: ref id, .. }) => id.to_string(),
             _ => format!("_{}", self.counter),
         };
         OptionallyAliasedExpr::Aliased(AliasedExpr {

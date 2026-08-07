@@ -101,9 +101,9 @@ impl Visitor for ExtendedUnwindRewriteVisitor {
 // Vec, we can not worry about parts that contain `.` in them.
 fn path_vec_to_path(mut path: Vec<String>) -> Expression {
     if path.len() == 1 {
-        return Expression::Identifier(path.remove(0));
+        return Expression::Identifier(path.remove(0).into());
     }
-    let mut ret = Expression::Identifier(path.remove(0));
+    let mut ret = Expression::Identifier(path.remove(0).into());
     for p in path.into_iter() {
         ret = Expression::Subpath(SubpathExpr {
             expr: Box::new(ret),

@@ -444,13 +444,14 @@ impl FunctionArgumentVisitor {
 /// Returns the `this` identifier expression used within higher order function bodies.
 #[inline(always)]
 fn this() -> Expression {
-    Expression::Identifier(THIS.to_string())
+    Expression::Identifier(THIS.into())
 }
 
 /// Returns the `value` identifier expression used within higher order function bodies.
+/// Note that "value" is a reserved keyword in SQL, so we need indicate that it is delimited.
 #[inline(always)]
 fn value() -> Expression {
-    Expression::Identifier(VALUE.to_string())
+    Expression::Identifier((VALUE, true).into())
 }
 
 fn prepend_parent_to_field_path_expr(
@@ -459,8 +460,8 @@ fn prepend_parent_to_field_path_expr(
 ) -> Option<Expression> {
     match field_path_expr {
         Expression::Identifier(id) => Some(Expression::Subpath(SubpathExpr {
-            expr: Box::new(Expression::Identifier(parent.to_string())),
-            subpath: id.clone(),
+            expr: Box::new(Expression::Identifier(parent.into())),
+            subpath: id.name.clone(),
         })),
         Expression::Subpath(expr) => Some(Expression::Subpath(SubpathExpr {
             expr: Box::new(prepend_parent_to_field_path_expr(
@@ -496,25 +497,25 @@ mod prepend_parent_to_field_path_expr_tests {
     test_prepend_parent_to_field_path_expr!(
         identifier,
         expected = Some(Expression::Subpath(SubpathExpr {
-            expr: Box::new(Expression::Identifier("a".to_string())),
+            expr: Box::new(Expression::Identifier("a".into())),
             subpath: "b".to_string(),
         })),
         input_parent = "a",
-        input_field_path_expr = Expression::Identifier("b".to_string()),
+        input_field_path_expr = Expression::Identifier("b".into()),
     );
 
     test_prepend_parent_to_field_path_expr!(
         subpath,
         expected = Some(Expression::Subpath(SubpathExpr {
             expr: Box::new(Expression::Subpath(SubpathExpr {
-                expr: Box::new(Expression::Identifier("a".to_string())),
+                expr: Box::new(Expression::Identifier("a".into())),
                 subpath: "b".to_string(),
             })),
             subpath: "c".to_string(),
         })),
         input_parent = "a",
         input_field_path_expr = Expression::Subpath(SubpathExpr {
-            expr: Box::new(Expression::Identifier("b".to_string())),
+            expr: Box::new(Expression::Identifier("b".into())),
             subpath: "c".to_string(),
         }),
     );
@@ -525,7 +526,7 @@ mod prepend_parent_to_field_path_expr_tests {
             expr: Box::new(Expression::Subpath(SubpathExpr {
                 expr: Box::new(Expression::Subpath(SubpathExpr {
                     expr: Box::new(Expression::Subpath(SubpathExpr {
-                        expr: Box::new(Expression::Identifier("a".to_string())),
+                        expr: Box::new(Expression::Identifier("a".into())),
                         subpath: "b".to_string(),
                     })),
                     subpath: "c".to_string(),
@@ -538,7 +539,7 @@ mod prepend_parent_to_field_path_expr_tests {
         input_field_path_expr = Expression::Subpath(SubpathExpr {
             expr: Box::new(Expression::Subpath(SubpathExpr {
                 expr: Box::new(Expression::Subpath(SubpathExpr {
-                    expr: Box::new(Expression::Identifier("b".to_string())),
+                    expr: Box::new(Expression::Identifier("b".into())),
                     subpath: "c".to_string(),
                 })),
                 subpath: "d".to_string(),
