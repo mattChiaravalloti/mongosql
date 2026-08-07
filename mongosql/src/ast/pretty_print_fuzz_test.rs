@@ -3,7 +3,7 @@ mod fuzz_test {
     use crate::{
         ast::{
             definitions::*,
-            pretty_print::{ident_needs_delimiters, PrettyPrint},
+            pretty_print::PrettyPrint,
             rewrites::{Pass, SingleTupleRewritePass},
         },
         parser,
@@ -648,9 +648,7 @@ mod arbitrary {
                 20 => Self::StringConstructor(arbitrary_string(g)),
                 21 => Self::Tuple((1..4).map(|_| Self::arbitrary(nested_g)).collect()),
                 22 => Self::TypeAssertion(TypeAssertionExpr::arbitrary(nested_g)),
-                // TODO: SQL-3298: Replace `23 => TypeAssertion` with `23 => HigherOrderFunction`
-                23 => Self::TypeAssertion(TypeAssertionExpr::arbitrary(nested_g)),
-                // 23 => Self::HigherOrderFunction(HigherOrderFunctionExpr::arbitrary(nested_g)),
+                23 => Self::HigherOrderFunction(HigherOrderFunctionExpr::arbitrary(nested_g)),
                 24 => Self::ArrayCast(ArrayCastExpr::arbitrary(nested_g)),
                 _ => panic!("missing Expression variant(s)"),
             }
