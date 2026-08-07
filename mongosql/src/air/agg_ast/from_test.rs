@@ -1056,7 +1056,9 @@ mod expression {
         test_from_expr!(
             get_field,
             expected = air::Expression::GetField(air::GetField {
-                field: "a".to_string(),
+                field: Box::new(air::Expression::Literal(air::LiteralValue::String(
+                    "a".to_string()
+                ))),
                 input: Box::new(air::Expression::FieldRef("d".to_string().into()))
             }),
             input = agg_ast::Expression::TaggedOperator(agg_ast::TaggedOperator::GetField(

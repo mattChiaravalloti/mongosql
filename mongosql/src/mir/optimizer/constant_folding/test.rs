@@ -2113,35 +2113,33 @@ test_constant_fold!(
     expected_changed = true,
     input = Stage::Array(ArraySource {
         alias: "".into(),
-        array: vec![Expression::ScalarFunction(ScalarFunctionApplication {
-            function: ScalarFunction::ComputedFieldAccess,
-            args: vec![
-                Expression::Document(
+        array: vec![Expression::ComputedFieldAccess(ComputedFieldAccess::new(
+            Box::new(Expression::Document(
                     unchecked_unique_linked_hash_map! {"a".into() => Expression::Literal(LiteralValue::Integer(2))}
-                .into()),
-                Expression::Literal(LiteralValue::String("a".into()))
-            ],
-            is_nullable: false,
-        })],
+                .into())),
+            Box::new(Expression::Literal(LiteralValue::String("a".into()))),
+        ))],
         cache: SchemaCache::new(),
     }),
 );
-test_constant_fold_no_op!(
+test_constant_fold!(
     computed_field_missing,
-    Stage::Array(ArraySource {
+    expected = Stage::Array(ArraySource {
         alias: "".into(),
-        array: vec![Expression::ScalarFunction(ScalarFunctionApplication {
-            function: ScalarFunction::ComputedFieldAccess,
-            args: vec![
-                Expression::Document(
-                    unchecked_unique_linked_hash_map! {"a".into() => Expression::Literal(LiteralValue::Integer(2))}
-                .into()),
-                Expression::Literal(LiteralValue::String("b".into()))
-            ],
-            is_nullable: false,
-        })],
+        array: vec![Expression::Literal(LiteralValue::Null)],
         cache: SchemaCache::new(),
-    })
+    }),
+    expected_changed = true,
+    input = Stage::Array(ArraySource {
+        alias: "".into(),
+        array: vec![Expression::ComputedFieldAccess(ComputedFieldAccess::new(
+            Box::new(Expression::Document(
+                    unchecked_unique_linked_hash_map! {"a".into() => Expression::Literal(LiteralValue::Integer(2))}
+                .into())),
+            Box::new(Expression::Literal(LiteralValue::String("b".into()))),
+        ))],
+        cache: SchemaCache::new(),
+    }),
 );
 test_constant_fold!(
     slice_simple,

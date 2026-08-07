@@ -1,5 +1,6 @@
 mod aggregate; // mir::Aggregate
 mod case; // mir::Expression::{SearchedCase, SimpleCase}
+mod computed_field_access; // mir::Expression::ComputedFieldAccess
 mod field_access; // mir::Expression::{FieldAccess, Reference (implicit)}
 mod higher_order_function; // mir::Expression::HigherOrderFunction
 mod like; // mir::Expression::Like

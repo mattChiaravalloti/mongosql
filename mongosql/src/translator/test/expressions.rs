@@ -1203,32 +1203,6 @@ mod scalar_function {
     );
 
     test_translate_expression_with_schema_info!(
-         computed_field_access,
-         expected = Ok(air::Expression::SqlSemanticOperator(
-             air::SqlSemanticOperator {
-                 op: air::SqlOperator::ComputedFieldAccess,
-                 args: vec![
-                     air::Expression::Document(
-                         unchecked_unique_linked_hash_map! {"foo".to_string() => air::Expression::Literal(air::LiteralValue::Integer(1))}
-                     ),
-                     air::Expression::Literal(air::LiteralValue::String("foo".into())),
-                 ],
-             }
-         )),
-         input = mir::Expression::ScalarFunction(mir::ScalarFunctionApplication {
-             function: mir::ScalarFunction::ComputedFieldAccess,
-             args: vec![
-                 mir::Expression::Document(
-                     unchecked_unique_linked_hash_map! {"foo".to_string() => mir::Expression::Literal(mir::LiteralValue::Integer(1)),}
-                 .into()),
-                 mir::Expression::Literal(mir::LiteralValue::String("foo".into())),
-             ],
-
-             is_nullable: true,
-         }),
-     );
-
-    test_translate_expression_with_schema_info!(
         null_if_no_nullish,
         expected = Ok(air::Expression::SqlSemanticOperator(
             air::SqlSemanticOperator {
@@ -3625,7 +3599,7 @@ mod field_access {
     test_translate_expression!(
         from_non_reference_expr_with_nesting,
         expected = Ok(air::Expression::GetField(air::GetField {
-            field: "sub".to_string(),
+            field: Box::new(air::Expression::Literal(air::LiteralValue::String("sub".to_string()))),
             input: Box::new(air::Expression::Document(
                 unchecked_unique_linked_hash_map! {
                     "a".to_string() => air::Expression::Literal(air::LiteralValue::Integer(1))
@@ -3645,7 +3619,9 @@ mod field_access {
     test_translate_expression!(
         from_non_reference_expr_without_nesting,
         expected = Ok(air::Expression::GetField(air::GetField {
-            field: "sub".to_string(),
+            field: Box::new(air::Expression::Literal(air::LiteralValue::String(
+                "sub".to_string()
+            ))),
             input: Box::new(air::Expression::Literal(air::LiteralValue::String(
                 "f".to_string()
             )))
@@ -3660,7 +3636,9 @@ mod field_access {
     test_translate_expression!(
         dollar_prefixed_field,
         expected = Ok(air::Expression::GetField(air::GetField {
-            field: "$sub".to_string(),
+            field: Box::new(air::Expression::Literal(air::LiteralValue::String(
+                "$sub".to_string()
+            ))),
             input: Box::new(air::Expression::FieldRef("f".to_string().into())),
         })),
         input = *mir_field_access("f", "$sub", true),
@@ -3689,7 +3667,9 @@ mod field_access {
     test_translate_expression!(
         field_contains_dot,
         expected = Ok(air::Expression::GetField(air::GetField {
-            field: "s.ub".to_string(),
+            field: Box::new(air::Expression::Literal(air::LiteralValue::String(
+                "s.ub".to_string()
+            ))),
             input: Box::new(air::Expression::FieldRef("f".to_string().into()))
         })),
         input = *mir_field_access("f", "s.ub", true),
@@ -3705,7 +3685,9 @@ mod field_access {
     test_translate_expression!(
         empty_field_in_field_access,
         expected = Ok(air::Expression::GetField(air::GetField {
-            field: "".to_string(),
+            field: Box::new(air::Expression::Literal(air::LiteralValue::String(
+                "".to_string()
+            ))),
             input: Box::new(air::Expression::FieldRef("f".to_string().into()))
         })),
         input = *mir_field_access("f", "", true),
@@ -3718,6 +3700,29 @@ mod field_access {
             mr
         },
     );
+}
+
+mod computed_field_access {
+    use crate::{air, mir, unchecked_unique_linked_hash_map};
+
+    test_translate_expression_with_schema_info!(
+         computed_field_access,
+         expected = Ok(air::Expression::GetField(
+            air::GetField {
+                input: Box::new(air::Expression::Document(
+                    unchecked_unique_linked_hash_map! {"foo".to_string() => air::Expression::Literal(air::LiteralValue::Integer(1))}
+                )),
+                field: Box::new(air::Expression::Literal(air::LiteralValue::String("foo".into()))),
+            }
+         )),
+         input = mir::Expression::ComputedFieldAccess(mir::ComputedFieldAccess {
+             expr: Box::new(mir::Expression::Document(
+                     unchecked_unique_linked_hash_map! {"foo".to_string() => mir::Expression::Literal(mir::LiteralValue::Integer(1)),}
+                 .into())),
+             field: Box::new(mir::Expression::Literal(mir::LiteralValue::String("foo".into()))),
+             is_nullable: true,
+         }),
+     );
 }
 
 mod subquery {

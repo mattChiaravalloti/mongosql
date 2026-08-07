@@ -393,7 +393,6 @@ pub enum SqlOperator {
     Split,
 
     // Extended Operators
-    ComputedFieldAccess,
     CurrentTimestamp,
 }
 
@@ -507,7 +506,7 @@ pub enum LiteralValue {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetField {
-    pub field: String,
+    pub field: Box<Expression>,
     pub input: Box<Expression>,
 }
 

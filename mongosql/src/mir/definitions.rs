@@ -256,6 +256,7 @@ pub enum Expression {
     Document(DocumentExpr),
     Exists(ExistsExpr),
     FieldAccess(FieldAccess),
+    ComputedFieldAccess(ComputedFieldAccess),
     Is(IsExpr),
     Like(LikeExpr),
     Literal(LiteralValue),
@@ -283,6 +284,7 @@ impl Expression {
             Expression::Document(_) => false,
             Expression::Exists(_) => false,
             Expression::FieldAccess(x) => x.is_nullable,
+            Expression::ComputedFieldAccess(x) => x.is_nullable,
             Expression::Is(_) => false,
             Expression::Like(_) => false,
             Expression::Literal(LiteralValue::Null) => true,
@@ -307,6 +309,7 @@ impl Expression {
             Expression::Cast(x) => x.is_nullable = value,
             Expression::DateFunction(x) => x.is_nullable = value,
             Expression::FieldAccess(x) => x.is_nullable = value,
+            Expression::ComputedFieldAccess(x) => x.is_nullable = value,
             Expression::ScalarFunction(x) => x.is_nullable = x.function.is_always_nullable() || value,
             Expression::SearchedCase(x) => x.is_nullable = value,
             Expression::SimpleCase(x) => x.is_nullable = value,
@@ -493,6 +496,14 @@ pub struct FieldAccess {
     pub is_nullable: bool,
 }
 
+#[derive(PartialEq, Debug, Clone, new)]
+pub struct ComputedFieldAccess {
+    pub expr: Box<Expression>,
+    pub field: Box<Expression>,
+    #[new(value = "true")]
+    pub is_nullable: bool,
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum AggregationFunction {
     AddToArray,
@@ -555,10 +566,6 @@ pub enum ScalarFunction {
     Not,
     And,
     Or,
-
-    // Computed Field Access operator
-    // when the field is not known until runtime.
-    ComputedFieldAccess,
 
     // Conditional scalar functions
     NullIf,
@@ -627,7 +634,6 @@ impl ScalarFunction {
             ScalarFunction::BitLength => "BitLength",
             ScalarFunction::CharLength => "CharLength",
             ScalarFunction::Coalesce => "Coalesce",
-            ScalarFunction::ComputedFieldAccess => "ComputedFieldAccess",
             ScalarFunction::Concat => "Concat",
             ScalarFunction::Cos => "Cos",
             ScalarFunction::CurrentTimestamp => "CurrentTimestamp",
@@ -717,7 +723,6 @@ impl ScalarFunction {
             | ScalarFunction::And
             | ScalarFunction::BitLength
             | ScalarFunction::CharLength
-            | ScalarFunction::ComputedFieldAccess
             | ScalarFunction::Concat
             | ScalarFunction::CurrentTimestamp
             | ScalarFunction::Year

@@ -29,6 +29,7 @@ impl Visitor for ContainsSubqueryVisitor {
             Expression::DateFunction(e) => Expression::DateFunction(e.walk(self)),
             Expression::Document(e) => Expression::Document(e.walk(self)),
             Expression::FieldAccess(e) => Expression::FieldAccess(e.walk(self)),
+            Expression::ComputedFieldAccess(e) => Expression::ComputedFieldAccess(e.walk(self)),
             Expression::Is(e) => Expression::Is(e.walk(self)),
             Expression::Like(e) => Expression::Like(e.walk(self)),
             Expression::Literal(e) => Expression::Literal(e),

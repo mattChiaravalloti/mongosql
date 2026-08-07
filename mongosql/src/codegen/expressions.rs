@@ -1,6 +1,6 @@
 use crate::{
     air::{self, SqlOperator, TrimOperator},
-    codegen::{Error, MqlCodeGenerator, Result},
+    codegen::{MqlCodeGenerator, Result},
 };
 use bson::{bson, doc, Bson};
 use mongosql_datastructures::unique_linked_hash_map::UniqueLinkedHashMap;
@@ -137,10 +137,6 @@ impl MqlCodeGenerator {
                     .collect::<Result<Vec<_>>>()?;
                 bson::bson!({ Self::to_sql_op(sql_op.op).unwrap(): Bson::Array(ops) })
             }
-            SqlOperator::ComputedFieldAccess => {
-                // Adding this feature is tracked in SQL-673
-                return Err(Error::UnsupportedOperator(SqlOperator::ComputedFieldAccess));
-            }
             SqlOperator::CurrentTimestamp => Bson::String("$$NOW".to_string()),
         })
     }
@@ -185,9 +181,20 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_get_field(&self, gf: air::GetField) -> Result<Bson> {
+        let input = self.codegen_expression(*gf.input)?;
+        let field = match *gf.field {
+            air::Expression::Literal(air::LiteralValue::String(s)) => {
+                // Recall that in aggregation, a string literal that begins with '$' is a field
+                // reference. For example, `"$foo"` is a reference to the field "foo" in the input
+                // document, not a string literal with the value "$foo". `Self::wrap_in_literal_if`
+                // will wrap `s` in `$literal` if it starts with '$', which will result in it being
+                // evaluated as the string literal "$foo".
+                Self::wrap_in_literal_if(s, |s| s.starts_with('$'))
+            }
+            _ => self.codegen_expression(*gf.field)?,
+        };
+
         Ok({
-            let input = self.codegen_expression(*gf.input)?;
-            let field = Self::wrap_in_literal_if(gf.field, |s| s.starts_with('$'));
             bson!({
                 "$getField": {
                     "field": field,
@@ -198,6 +205,11 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_set_field(&self, sf: air::SetField) -> Result<Bson> {
+        // Recall that in aggregation, a string literal that begins with '$' is a field reference.
+        // For example, `"$foo"` is a reference to the field "foo" in the input document, not a
+        // string literal with the value "$foo". `Self::wrap_in_literal_if` will wrap `s` in
+        // `$literal` if it starts with '$', which will result in it being evaluated as the string
+        // literal "$foo".
         let field = Self::wrap_in_literal_if(sf.field, |s| s.starts_with('$'));
         let input = self.codegen_expression(*sf.input)?;
         let value = self.codegen_expression(*sf.value)?;
@@ -209,6 +221,11 @@ impl MqlCodeGenerator {
     }
 
     fn codegen_unset_field(&self, uf: air::UnsetField) -> Result<Bson> {
+        // Recall that in aggregation, a string literal that begins with '$' is a field reference.
+        // For example, `"$foo"` is a reference to the field "foo" in the input document, not a
+        // string literal with the value "$foo". `Self::wrap_in_literal_if` will wrap `s` in
+        // `$literal` if it starts with '$', which will result in it being evaluated as the string
+        // literal "$foo".
         let field = Self::wrap_in_literal_if(uf.field, |s| s.starts_with('$'));
         let input = self.codegen_expression(*uf.input)?;
         Ok(bson!({"$unsetField": {"field": field, "input": input}}))
