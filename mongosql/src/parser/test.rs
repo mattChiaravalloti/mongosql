@@ -3660,8 +3660,10 @@ mod unrecognized_token_suggestion {
 }
 
 mod higher_order_functions {
+    use crate::ast::*;
+
     mod map {
-        use crate::ast::*;
+        use super::*;
 
         parsable!(
             with_expr_function_arg,
@@ -3762,6 +3764,239 @@ mod higher_order_functions {
                 ))),
             })),
             input = "map(a, `LOG`)",
+        );
+    }
+
+    mod filter {
+        use super::*;
+
+        parsable!(
+            with_expr_function_arg,
+            expected = true,
+            input = "SELECT FILTER([1, 2, 3], this > 1)"
+        );
+
+        parsable!(
+            with_named_function_unary_op_arg,
+            expected = true,
+            input = "SELECT FILTER(a, not)"
+        );
+
+        parsable!(
+            with_named_function_binray_op_arg,
+            expected = true,
+            input = "SELECT FILTER(a, =)"
+        );
+
+        parsable!(
+            with_named_function_function_arg,
+            expected = true,
+            input = "SELECT FILTER(a, COALESCE)"
+        );
+
+        validate_ast!(
+            with_expr_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::Expr(Expression::Binary(BinaryExpr {
+                        left: Box::new(Expression::Identifier("this".into())),
+                        op: BinaryOp::Comparison(ComparisonOp::Eq),
+                        right: Box::new(Expression::Identifier("this".into())),
+                    }))),
+                })),
+            input = "filter(a, this = this)",
+        );
+
+        // Note that the parser defaults to UnaryOp::Pos for `+`.
+        // This test is semantically invalid since Filter expects a (nullable) boolean value, but
+        // we still want to ensure it parses as expected since it is syntactically valid.
+        validate_ast!(
+            with_named_function_pos_unary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                        UnaryOp::Pos
+                    ))),
+                })),
+            input = "filter(a, +)",
+        );
+
+        // Note that the parser defaults to UnaryOp::Neg for `-`.
+        validate_ast!(
+            with_named_function_neg_unary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                        UnaryOp::Neg
+                    ))),
+                })),
+            input = "Filter(a, -)",
+        );
+
+        validate_ast!(
+            with_named_function_binary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                        BinaryOp::Div
+                    ))),
+                })),
+            input = "filter(a, /)",
+        );
+
+        validate_ast!(
+            with_named_function_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::Function(
+                        FunctionName::Round
+                    ))),
+                })),
+            input = "Filter(a, Round)",
+        );
+
+        // Note that if a function name is delimited, it is parsed as an Identifier.
+        validate_ast!(
+            with_delimited_named_function_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    f: Box::new(FunctionArgument::Expr(Expression::Identifier(
+                        ("POW", true).into()
+                    ))),
+                })),
+            input = "filter(a, `POW`)",
+        );
+    }
+
+    mod reduce {
+        use super::*;
+
+        parsable!(
+            with_expr_function_arg,
+            expected = true,
+            input = "SELECT REDUCE([1, 2, 3], 0, this + `value`)"
+        );
+
+        parsable!(
+            with_named_function_unary_op_arg,
+            expected = true,
+            input = "SELECT REDUCE(a, b, not)"
+        );
+
+        parsable!(
+            with_named_function_binray_op_arg,
+            expected = true,
+            input = "SELECT REDUCE(a, b + 1, *)"
+        );
+
+        parsable!(
+            with_named_function_function_arg,
+            expected = true,
+            input = "SELECT REDUCE(a, 1, POW)"
+        );
+
+        validate_ast!(
+            with_expr_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Identifier("b".into())),
+                    f: Box::new(FunctionArgument::Expr(Expression::Binary(BinaryExpr {
+                        // Note that value is a keyword, so it is delimited in the input and
+                        // therefore delimiting is expected in the ast.
+                        left: Box::new(Expression::Identifier(("value", true).into())),
+                        op: BinaryOp::Div,
+                        right: Box::new(Expression::Identifier("this".into())),
+                    }))),
+                })),
+            input = "Reduce(a, b, `value` / this)",
+        );
+
+        // Note that the parser defaults to UnaryOp::Pos for `+`. At rewrite time, this is changed
+        // to BinaryOp::Add.
+        validate_ast!(
+            with_named_function_pos_unary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Identifier("b".into())),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                        UnaryOp::Pos
+                    ))),
+                })),
+            input = "reduce(a, b, +)",
+        );
+
+        // Note that the parser defaults to UnaryOp::Neg for `-`.
+        validate_ast!(
+            with_named_function_neg_unary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Literal(Literal::Integer(0))),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::UnaryOp(
+                        UnaryOp::Neg
+                    ))),
+                })),
+            input = "Reduce(a, 0, -)",
+        );
+
+        validate_ast!(
+            with_named_function_binary_op_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Literal(Literal::Integer(1))),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                        BinaryOp::Mul
+                    ))),
+                })),
+            input = "reduce(a, 1, *)",
+        );
+
+        validate_ast!(
+            with_named_function_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Literal(Literal::Integer(1))),
+                    f: Box::new(FunctionArgument::NamedFunction(NamedFunction::Function(
+                        FunctionName::Log
+                    ))),
+                })),
+            input = "reduce(a, 1, LOG)",
+        );
+
+        // Note that if a function name is delimited, it is parsed as an Identifier.
+        validate_ast!(
+            with_delimited_named_function_function_arg_ast,
+            method = parse_expression,
+            expected =
+                Expression::HigherOrderFunction(HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                    array: Box::new(Expression::Identifier("a".into())),
+                    init_value: Box::new(Expression::Identifier("b".into())),
+                    f: Box::new(FunctionArgument::Expr(Expression::Identifier(
+                        ("FLOOR", true).into()
+                    ))),
+                })),
+            input = "reduce(a, b, `FLOOR`)",
         );
     }
 }
