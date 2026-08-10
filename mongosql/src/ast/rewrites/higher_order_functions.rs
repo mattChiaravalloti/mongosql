@@ -1,11 +1,11 @@
 use crate::ast::{
     self,
-    rewrites::{try_exact_args, try_extract_either_args, Error, Pass, Result},
+    rewrites::{try_exact_args, try_extract_either_args, ArgCount, Error, Pass, Result},
     visitor::Visitor,
     AccessExpr, ArrayCastExpr, BinaryExpr, BinaryOp, CastExpr, ComparisonOp, Expression,
     FilterExpr, FunctionArgument, FunctionArguments, FunctionExpr, FunctionName,
-    HigherOrderFunctionExpr, IsExpr, Literal, MapExpr, ReduceExpr, SubpathExpr, TrimExpr, TrimSpec,
-    Type, TypeOrMissing, UnaryExpr, UnaryOp,
+    HigherOrderFunctionExpr, IsExpr, Literal, MapExpr, NamedFunction, ReduceExpr, SubpathExpr,
+    TrimExpr, TrimSpec, Type, TypeOrMissing, UnaryExpr, UnaryOp,
 };
 
 const THIS: &str = "this";
@@ -22,8 +22,12 @@ impl Pass for HigherOrderFunctionsRewritePass {
             return Err(error);
         }
 
-        let mut func_arg_visitor = FunctionArgumentVisitor;
+        let mut func_arg_visitor = FunctionArgumentVisitor { error: None };
         let query = query.walk(&mut func_arg_visitor);
+
+        if let Some(error) = func_arg_visitor.error {
+            return Err(error);
+        }
 
         Ok(query)
     }
@@ -125,18 +129,6 @@ impl HigherOrderFunctionsAliasVisitor {
         }))
     }
 
-    /// Returns the `this` identifier expression used within higher order function bodies.
-    #[inline(always)]
-    fn this() -> Expression {
-        Expression::Identifier(THIS.to_string())
-    }
-
-    /// Returns the `value` identifier expression used within higher order function bodies.
-    #[inline(always)]
-    fn value() -> Expression {
-        Expression::Identifier(VALUE.to_string())
-    }
-
     #[inline(always)]
     fn make_binary(left: Expression, op: BinaryOp, right: Expression) -> Expression {
         Expression::Binary(BinaryExpr {
@@ -160,7 +152,7 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_map(
             array.clone(),
             Expression::Cast(CastExpr {
-                expr: Box::new(Self::this()),
+                expr: Box::new(this()),
                 to,
                 on_null: None,
                 on_error: None,
@@ -176,7 +168,7 @@ impl HigherOrderFunctionsAliasVisitor {
         // If it is not, we should wrap it in an AccessExpr with "this" as the base.
         let f = prepend_parent_to_field_path_expr(THIS, extract_expr).unwrap_or_else(|| {
             Expression::Access(AccessExpr {
-                expr: Box::new(Self::this()),
+                expr: Box::new(this()),
                 subfield: Box::new(extract_expr.clone()),
             })
         });
@@ -193,7 +185,7 @@ impl HigherOrderFunctionsAliasVisitor {
             Expression::Unary(UnaryExpr {
                 op: UnaryOp::Not,
                 expr: Box::new(Expression::Is(IsExpr {
-                    expr: Box::new(Self::this()),
+                    expr: Box::new(this()),
                     target_type: TypeOrMissing::Type(Type::Null),
                 })),
             }),
@@ -207,7 +199,7 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_filter(
             array.clone(),
             Self::make_binary(
-                Self::this(),
+                this(),
                 BinaryOp::Comparison(ComparisonOp::Neq),
                 remove_expr.clone(),
             ),
@@ -222,7 +214,7 @@ impl HigherOrderFunctionsAliasVisitor {
     }
 
     /// Rewrite any single-argument reduce-alias function (e.g., `ARRAY_SUM(a)` into
-    /// `REDUCE(a, init_value, value op this)`.
+    /// `REDUCE(a, init_value, value op this)`).
     fn rewrite_single_arg_reduce_alias(
         name: &'static str,
         args: &[Expression],
@@ -234,11 +226,11 @@ impl HigherOrderFunctionsAliasVisitor {
         Ok(Self::make_reduce(
             array.clone(),
             Expression::Literal(init_value),
-            Self::make_binary(Self::value(), op, Self::this()),
+            Self::make_binary(value(), op, this()),
         ))
     }
 
-    /// Rewrite `ARRAY_AVG(a)` into `REDUCE(a, 0, this + value) / SIZE(a)`.
+    /// Rewrite `ARRAY_AVG(a)` into `REDUCE(a, 0, value + this) / SIZE(a)`.
     fn rewrite_array_avg(args: &[Expression]) -> Result<Expression> {
         let rewritten_sum = Self::rewrite_single_arg_reduce_alias(
             "ARRAY_AVG",
@@ -271,7 +263,7 @@ impl HigherOrderFunctionsAliasVisitor {
             Ok(Self::make_reduce(
                 array.clone(),
                 Expression::StringConstructor("".to_string()),
-                Self::make_binary(Self::value(), BinaryOp::Concat, Self::this()),
+                Self::make_binary(value(), BinaryOp::Concat, this()),
             ))
         } else {
             Ok(Expression::Trim(TrimExpr {
@@ -281,9 +273,9 @@ impl HigherOrderFunctionsAliasVisitor {
                     array.clone(),
                     Expression::StringConstructor("".to_string()),
                     Self::make_binary(
-                        Self::make_binary(Self::value(), BinaryOp::Concat, sep.clone()),
+                        Self::make_binary(value(), BinaryOp::Concat, sep.clone()),
                         BinaryOp::Concat,
-                        Self::this(),
+                        this(),
                     ),
                 )),
             }))
@@ -291,10 +283,175 @@ impl HigherOrderFunctionsAliasVisitor {
     }
 }
 
-struct FunctionArgumentVisitor;
+struct FunctionArgumentVisitor {
+    error: Option<Error>,
+}
 
-// SQL-3296: Implement FunctionArgumentVisitor
-impl Visitor for FunctionArgumentVisitor {}
+impl Visitor for FunctionArgumentVisitor {
+    fn visit_higher_order_function_expr(
+        &mut self,
+        node: HigherOrderFunctionExpr,
+    ) -> HigherOrderFunctionExpr {
+        let node = node.walk(self);
+        match node {
+            HigherOrderFunctionExpr::Map(MapExpr { array, f }) => {
+                HigherOrderFunctionExpr::Map(MapExpr {
+                    array,
+                    f: Box::new(self.rewrite_unary_context_arg(*f)),
+                })
+            }
+            HigherOrderFunctionExpr::Filter(FilterExpr { array, f }) => {
+                HigherOrderFunctionExpr::Filter(FilterExpr {
+                    array,
+                    f: Box::new(self.rewrite_unary_context_arg(*f)),
+                })
+            }
+            HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                array,
+                init_value,
+                f,
+            }) => HigherOrderFunctionExpr::Reduce(ReduceExpr {
+                array,
+                init_value,
+                f: Box::new(self.rewrite_binary_context_arg(*f)),
+            }),
+        }
+    }
+}
+
+impl FunctionArgumentVisitor {
+    /// Rewrites a `FunctionArgument` appearing in a "unary context", i.e. the body of a `MAP` or
+    /// `FILTER`, where the function is applied to a single argument, `this`.
+    ///
+    /// The overloaded binary operators `+` and `-` are rewritten to their unary counterparts.
+    /// Any other binary operator is an error, since it requires two arguments; in that case the
+    /// argument is returned unchanged (this is because error checking happens after the visitor
+    /// returns).
+    fn rewrite_unary_context_arg(&mut self, f: FunctionArgument) -> FunctionArgument {
+        match f {
+            FunctionArgument::Expr(_) => f,
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(op))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Add)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(UnaryOp::Pos))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(BinaryOp::Sub)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_unary_expr(UnaryOp::Neg))
+            }
+            // Exhaustively match other BinaryOps so in the future if we add new binary operators
+            // with overloaded forms, we will be forced to handle them here.
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::And))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Concat))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Div))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::In))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Mul))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::NotIn))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op @ BinaryOp::Or))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Eq),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Gt),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Gte),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Lt),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Lte),
+            ))
+            | FunctionArgument::NamedFunction(NamedFunction::BinaryOp(
+                op @ BinaryOp::Comparison(ComparisonOp::Neq),
+            )) => {
+                self.error = Some(Error::IncorrectArgumentCount {
+                    name: op.as_str(),
+                    required: ArgCount::Exactly(2),
+                    found: 1,
+                });
+                f
+            }
+            FunctionArgument::NamedFunction(NamedFunction::Function(op)) => {
+                FunctionArgument::Expr(Self::named_function_to_function_call(op, vec![this()]))
+            }
+        }
+    }
+
+    /// Rewrites a `FunctionArgument` appearing in a "binary context", i.e. the body of a `REDUCE`,
+    /// where the function is applied to two arguments, `value` and `this`.
+    ///
+    /// The overloaded unary operators `+` and `-` are rewritten to their binary counterparts.
+    /// Any other unary operator is an error, since it requires a single argument; in that case the
+    /// argument is returned unchanged (this is because error checking happens after the visitor
+    /// returns).
+    fn rewrite_binary_context_arg(&mut self, f: FunctionArgument) -> FunctionArgument {
+        match f {
+            FunctionArgument::Expr(_) => f,
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Pos)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(BinaryOp::Add))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(BinaryOp::Sub))
+            }
+            // Exhaustively match other UnaryOps so in the future if we add new unary operators
+            // with overloaded forms, we will be forced to handle them here.
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(op @ UnaryOp::Not)) => {
+                self.error = Some(Error::IncorrectArgumentCount {
+                    name: op.as_str(),
+                    required: ArgCount::Exactly(1),
+                    found: 2,
+                });
+                f
+            }
+            FunctionArgument::NamedFunction(NamedFunction::BinaryOp(op)) => {
+                FunctionArgument::Expr(Self::rewrite_named_function_to_binary_expr(op))
+            }
+            FunctionArgument::NamedFunction(NamedFunction::Function(op)) => FunctionArgument::Expr(
+                Self::named_function_to_function_call(op, vec![value(), this()]),
+            ),
+        }
+    }
+
+    fn rewrite_named_function_to_unary_expr(op: UnaryOp) -> Expression {
+        Expression::Unary(UnaryExpr {
+            op,
+            expr: Box::new(this()),
+        })
+    }
+
+    fn rewrite_named_function_to_binary_expr(op: BinaryOp) -> Expression {
+        Expression::Binary(BinaryExpr {
+            left: Box::new(value()),
+            op,
+            right: Box::new(this()),
+        })
+    }
+
+    fn named_function_to_function_call(op: FunctionName, args: Vec<Expression>) -> Expression {
+        Expression::Function(FunctionExpr {
+            function: op,
+            args: FunctionArguments::Args(args),
+            set_quantifier: None,
+        })
+    }
+}
+
+/***************************************/
+/********** Utility Functions **********/
+/***************************************/
+/// Returns the `this` identifier expression used within higher order function bodies.
+#[inline(always)]
+fn this() -> Expression {
+    Expression::Identifier(THIS.to_string())
+}
+
+/// Returns the `value` identifier expression used within higher order function bodies.
+#[inline(always)]
+fn value() -> Expression {
+    Expression::Identifier(VALUE.to_string())
+}
 
 fn prepend_parent_to_field_path_expr(
     parent: &str,
