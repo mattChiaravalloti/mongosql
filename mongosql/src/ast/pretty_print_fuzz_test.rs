@@ -1282,7 +1282,29 @@ mod arbitrary {
             let rng = &(0..Self::VARIANT_COUNT).collect::<Vec<_>>();
             match g.choose(rng).unwrap() {
                 0 => Self::UnaryOp(UnaryOp::arbitrary(g)),
-                1 => Self::BinaryOp(BinaryOp::arbitrary(g)),
+                1 => {
+                    let op = BinaryOp::arbitrary(g);
+                    match op {
+                        // `+` and `-` are always parsed as the UnaryOp versions, so we cannot
+                        // create a BinaryOp version of them here or else the reparsed tree would
+                        // differ.
+                        BinaryOp::Add => Self::UnaryOp(UnaryOp::Pos),
+                        BinaryOp::Sub => Self::UnaryOp(UnaryOp::Neg),
+                        BinaryOp::And
+                        | BinaryOp::Concat
+                        | BinaryOp::Div
+                        | BinaryOp::In
+                        | BinaryOp::Mul
+                        | BinaryOp::NotIn
+                        | BinaryOp::Or
+                        | BinaryOp::Comparison(ComparisonOp::Eq)
+                        | BinaryOp::Comparison(ComparisonOp::Gt)
+                        | BinaryOp::Comparison(ComparisonOp::Gte)
+                        | BinaryOp::Comparison(ComparisonOp::Lt)
+                        | BinaryOp::Comparison(ComparisonOp::Lte)
+                        | BinaryOp::Comparison(ComparisonOp::Neq) => Self::BinaryOp(op),
+                    }
+                }
                 2 => Self::Function(FunctionName::arbitrary(g)),
                 _ => panic!("missing NamedFunction variant(s)"),
             }
