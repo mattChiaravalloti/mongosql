@@ -2,7 +2,9 @@ use agg_ast::definitions::Namespace;
 use bson::{doc, Document};
 use clap::Parser;
 use mongodb::sync::{Client, Collection};
-use mongosql::{build_catalog_from_catalog_schema, catalog::Catalog, json_schema::Schema};
+use mongosql::{
+    build_catalog_from_catalog_schema, catalog::Catalog, json_schema::Schema, SchemaCheckingMode,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -46,6 +48,8 @@ struct Cli {
     translation: bool,
     #[arg(short, long, help = "Run the query and display the result")]
     execute: bool,
+    #[arg(short, long, help = "Run in strict schema checking mode")]
+    strict: bool,
     #[arg(
         short,
         long,
@@ -122,8 +126,14 @@ fn main() -> Result<(), CliError> {
     } else {
         get_schema_catalog(uri.as_str(), current_db.as_str(), namespaces)?
     };
+    let schema_checking_mode = if args.strict {
+        SchemaCheckingMode::Strict
+    } else {
+        SchemaCheckingMode::Relaxed
+    };
     let options = mongosql::options::SqlOptions {
         allow_order_by_missing_columns: true,
+        schema_checking_mode,
         ..Default::default()
     };
     let translation =
