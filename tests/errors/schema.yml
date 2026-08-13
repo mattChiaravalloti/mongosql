@@ -6,11 +6,10 @@ tests:
     algebrize_error: 'Error 1001: incorrect argument count for Round: required exactly 2, found 3'
 
   - description: Error 1001 IncorrectArgumentCount with Minimum requirement
-    query: "SELECT MAP(a, +) FROM foo"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
+    query: "SELECT COALESCE() FROM foo"
     current_db: errors_schema
     should_compile: false
-    algebrize_error: 'Error 1001: incorrect argument count for Add: required at least 2, found 1'
+    algebrize_error: 'Error 1001: incorrect argument count for Coalesce: required at least 1, found 0'
 
   - description: Error 1002 SchemaChecking
     query: "SELECT ROUND(c,5) FROM foo"
@@ -96,3 +95,8 @@ tests:
     should_compile: false
     algebrize_error: "Error 1016: unknown collection 'baz' in database 'errors_schema'"
 
+  - description: Error 1020 HigherOrderFunctionWrapper
+    query: "SELECT MAP(['a'], this + 1) FROM foo"
+    current_db: errors_schema
+    should_compile: false
+    algebrize_error: "Error 1020: Invalid function argument for `Map`: Invalid usage of variable `this`. Recall that usages of the `this` variable must be satisfied by the schema of the elements of the array. Sub-Error Code 1002: Incorrect argument type for `Add`. Required: nullable numeric type. Found: string."

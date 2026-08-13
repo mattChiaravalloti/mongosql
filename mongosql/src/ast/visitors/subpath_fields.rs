@@ -23,7 +23,7 @@ impl SubpathFieldVisitor {
                 self.collect_subpath_entries(&subpath_expr.expr, entries);
                 entries.push(subpath_expr.subpath.clone());
             }
-            Expression::Identifier(ident) => {
+            Expression::Identifier(IdentifierExpr { name: ident, .. }) => {
                 entries.push(ident.clone());
             }
             _ => (),

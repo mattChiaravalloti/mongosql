@@ -62,7 +62,7 @@ impl PositionalSortKeyRewriteVisitor {
             Some(_) => Err(Error::NoAliasForSortKeyAtPosition(position)),
         };
         match alias {
-            Ok(alias) => SortKey::Simple(Expression::Identifier(alias.clone())),
+            Ok(alias) => SortKey::Simple(Expression::Identifier(alias.clone().into())),
             Err(err) => {
                 self.error = Some(err);
                 key

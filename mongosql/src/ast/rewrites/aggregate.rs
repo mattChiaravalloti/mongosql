@@ -302,7 +302,7 @@ impl Visitor for AggregateAliasingVisitor {
                 match self.agg_funcs.get(&func_key) {
                     // We can safely unwrap the alias here because any value retrieved
                     // from `agg_funcs` would have been previously inserted with an alias.
-                    Some(x) => Expression::Identifier(x.alias.clone()),
+                    Some(x) => Expression::Identifier(x.alias.clone().into()),
                     None => {
                         let new_agg_alias = format!("_agg{}", self.next_agg_id);
                         self.next_agg_id += 1;
@@ -313,7 +313,7 @@ impl Visitor for AggregateAliasingVisitor {
                                 alias: new_agg_alias.clone(),
                             },
                         );
-                        Expression::Identifier(new_agg_alias)
+                        Expression::Identifier(new_agg_alias.into())
                     }
                 }
             }

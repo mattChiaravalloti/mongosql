@@ -2,7 +2,6 @@ tests:
   - description: MAP correctness test
     current_db: spec_query_higher_order_functions
     query: "SELECT VALUE { 'a': a, 'v': MAP(a, this + 1) } FROM `map` AS `map`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     result:
       - { '': { "a": [], "v": [] } }
       - { '': { "a": [1], "v": [2] } }
@@ -14,7 +13,6 @@ tests:
   - description: FILTER correctness test
     current_db: spec_query_higher_order_functions
     query: "SELECT VALUE { 'a': a, 'v': FILTER(a, this > 0) } FROM `filter` AS `filter`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     result:
       - { '': { "a": [], "v": [] } }
       - { '': { "a": [1], "v": [1] } }
@@ -25,8 +23,7 @@ tests:
 
   - description: REDUCE correctness test
     current_db: spec_query_higher_order_functions
-    query: "SELECT VALUE { 'a': a, 'i': i, 'v': REDUCE(a, i, this + value) } FROM `reduce` AS `reduce`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
+    query: "SELECT VALUE { 'a': a, 'i': i, 'v': REDUCE(a, i, this + `value`) } FROM `reduce` AS `reduce`"
     result:
       - { '': { "a": [], "i": 0, "v": 0 } }
       - { '': { "a": [1], "i": 0, "v": 1 } }
@@ -43,7 +40,6 @@ tests:
   - description: There is no ambiguity between higher order function variable this and field references called this (MAP)
     current_db: spec_query_higher_order_functions
     query: "SELECT VALUE { 'a': a, 'this': this, 'with_local_this': MAP(a, this + this), 'with_field_ref_this': MAP(a, this + unambiguous.this)} FROM `unambiguous` AS `unambiguous`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
     result:
       - { '': { 'a': [], 'this': 100, 'with_local_this': [], 'with_field_ref_this': [] } }
       - { '': { 'a': [1], 'this': 100, 'with_local_this': [2], 'with_field_ref_this': [101] } }
@@ -58,8 +54,7 @@ tests:
   # references to this in the context of a higher order function are resolved to the variable this.
   - description: There is no ambiguity between higher order function variable this and field references called this (FILTER)
     current_db: spec_query_higher_order_functions
-    query: "SELECT VALUE { 'a': a, 'this': this, 'with_local_this': FILTER(a, this = this), 'with_field_ref_this': MAP(a, this = unambiguous.this)} FROM `unambiguous` AS `unambiguous`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
+    query: "SELECT VALUE { 'a': a, 'this': this, 'with_local_this': FILTER(a, this = this), 'with_field_ref_this': FILTER(a, this = unambiguous.this)} FROM `unambiguous` AS `unambiguous`"
     result:
       - { '': { 'a': [], 'this': 100, 'with_local_this': [], 'with_field_ref_this': [] } }
       - { '': { 'a': [1], 'this': 100, 'with_local_this': [1], 'with_field_ref_this': [] } }
@@ -75,13 +70,12 @@ tests:
   # variables this or value.
   - description: There is no ambiguity between higher order function variable this and field references called this (REDUCE)
     current_db: spec_query_higher_order_functions
-    query: "SELECT VALUE { 'a': a, 'this': this, 'value': value, 'with_local_vars': REDUCE(a, 0, this + value), 'with_field_ref_this': REDUCE(a, 0, unambiguous.this + value), 'with_field_ref_value': REDUCE(a, 0, this + unambiguous.value) } FROM `unambiguous` AS `unambiguous`"
-    skip_reason: "SQL-3298: Finish support for higher order functions"
+    query: "SELECT VALUE { 'a': a, 'this': this, 'value': `value`, 'with_local_vars': REDUCE(a, 0, this + `value`), 'with_field_ref_this': REDUCE(a, 0, unambiguous.this + `value`), 'with_field_ref_value': REDUCE(a, 0, this + unambiguous.`value`) } FROM `unambiguous` AS `unambiguous`"
     result:
       - { '': { 'a': [], 'this': 100, 'value': 1000, 'with_local_vars': 0, 'with_field_ref_this': 0, 'with_field_ref_value': 0 } }
-      - { '': { 'a': [1], 'this': 100, 'value': 1000, 'with_local_this': 1, 'with_field_ref_this': 100, 'with_field_ref_value': 1001 } }
-      - { '': { 'a': [1, 2, 3], 'this': 100, 'value': 1000, 'with_local_this': 6, 'with_field_ref_this': 300, 'with_field_ref_value': 1003 } }
-      - { '': { 'a': [1, 2, 3], 'this': null, 'value': 1000, 'with_local_this': 6, 'with_field_ref_this': null, 'with_field_ref_value': 1003 } }
-      - { '': { 'a': [1, 2, 3], 'value': 1000, 'with_local_this': 6, 'with_field_ref_this': null, 'with_field_ref_value': 1003 } }
-      - { '': { 'a': [1, 2, 3], 'this': 100, 'value': null, 'with_local_this': 6, 'with_field_ref_this': 300, 'with_field_ref_value': null } }
-      - { '': { 'a': [1, 2, 3], 'this': 100, 'with_local_this': 6, 'with_field_ref_this': 300, 'with_field_ref_value': null } }
+      - { '': { 'a': [1], 'this': 100, 'value': 1000, 'with_local_vars': 1, 'with_field_ref_this': 100, 'with_field_ref_value': 1001 } }
+      - { '': { 'a': [1, 2, 3], 'this': 100, 'value': 1000, 'with_local_vars': 6, 'with_field_ref_this': 300, 'with_field_ref_value': 1003 } }
+      - { '': { 'a': [1, 2, 3], 'this': null, 'value': 1000, 'with_local_vars': 6, 'with_field_ref_this': null, 'with_field_ref_value': 1003 } }
+      - { '': { 'a': [1, 2, 3], 'value': 1000, 'with_local_vars': 6, 'with_field_ref_this': null, 'with_field_ref_value': 1003 } }
+      - { '': { 'a': [1, 2, 3], 'this': 100, 'value': null, 'with_local_vars': 6, 'with_field_ref_this': 300, 'with_field_ref_value': null } }
+      - { '': { 'a': [1, 2, 3], 'this': 100, 'with_local_vars': 6, 'with_field_ref_this': 300, 'with_field_ref_value': null } }

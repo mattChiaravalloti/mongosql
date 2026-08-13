@@ -82,7 +82,7 @@ test_algebrize!(
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"2\"}".to_string()
         )),
-        max: Box::new(ast::Expression::Identifier("a".to_string())),
+        max: Box::new(ast::Expression::Identifier("a".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -126,7 +126,7 @@ test_algebrize!(
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"2\"}".to_string()
         )),
-        max: Box::new(ast::Expression::Identifier("a".to_string())),
+        max: Box::new(ast::Expression::Identifier("a".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -163,7 +163,7 @@ test_algebrize!(
         arg: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        min: Box::new(ast::Expression::Identifier("a".to_string())),
+        min: Box::new(ast::Expression::Identifier("a".into())),
         max: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"2\"}".to_string()
         )),
@@ -207,7 +207,7 @@ test_algebrize!(
         arg: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        min: Box::new(ast::Expression::Identifier("a".to_string())),
+        min: Box::new(ast::Expression::Identifier("a".into())),
         max: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"2\"}".to_string()
         )),
@@ -244,7 +244,7 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
@@ -288,7 +288,7 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
@@ -335,8 +335,8 @@ test_algebrize!(
         arg: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        min: Box::new(ast::Expression::Identifier("a".to_string())),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        min: Box::new(ast::Expression::Identifier("a".into())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -378,8 +378,8 @@ test_algebrize!(
         arg: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        min: Box::new(ast::Expression::Identifier("a".to_string())),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        min: Box::new(ast::Expression::Identifier("a".into())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -423,8 +423,8 @@ test_algebrize!(
         arg: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        min: Box::new(ast::Expression::Identifier("a".to_string())),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        min: Box::new(ast::Expression::Identifier("a".into())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -463,11 +463,11 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -506,11 +506,11 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -551,11 +551,11 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
         min: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
-        max: Box::new(ast::Expression::Identifier("b".to_string())),
+        max: Box::new(ast::Expression::Identifier("b".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -594,8 +594,8 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
-        min: Box::new(ast::Expression::Identifier("b".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
+        min: Box::new(ast::Expression::Identifier("b".into())),
         max: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
@@ -637,8 +637,8 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
-        min: Box::new(ast::Expression::Identifier("b".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
+        min: Box::new(ast::Expression::Identifier("b".into())),
         max: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
@@ -682,8 +682,8 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Between(ast::BetweenExpr {
-        arg: Box::new(ast::Expression::Identifier("a".to_string())),
-        min: Box::new(ast::Expression::Identifier("b".to_string())),
+        arg: Box::new(ast::Expression::Identifier("a".into())),
+        min: Box::new(ast::Expression::Identifier("b".into())),
         max: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
         )),

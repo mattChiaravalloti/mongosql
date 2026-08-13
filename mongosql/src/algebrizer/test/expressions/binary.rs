@@ -592,7 +592,7 @@ test_algebrize!(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Gt),
-        right: Box::new(ast::Expression::Identifier("a".to_string())),
+        right: Box::new(ast::Expression::Identifier("a".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -631,7 +631,7 @@ test_algebrize!(
             "{\"$numberInt\": \"1\"}".to_string()
         )),
         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Lt),
-        right: Box::new(ast::Expression::Identifier("a".to_string())),
+        right: Box::new(ast::Expression::Identifier("a".into())),
     }),
     env = map! {
         ("foo", 1u16).into() => Schema::Document( Document {
@@ -664,7 +664,7 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Binary(ast::BinaryExpr {
-        left: Box::new(ast::Expression::Identifier("a".to_string())),
+        left: Box::new(ast::Expression::Identifier("a".into())),
         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Gte),
         right: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
@@ -703,7 +703,7 @@ test_algebrize!(
         }
     )),
     input = ast::Expression::Binary(ast::BinaryExpr {
-        left: Box::new(ast::Expression::Identifier("a".to_string())),
+        left: Box::new(ast::Expression::Identifier("a".into())),
         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Lte),
         right: Box::new(ast::Expression::StringConstructor(
             "{\"$numberInt\": \"1\"}".to_string()
@@ -748,7 +748,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("a".to_string())),
+            left: Box::new(ast::Expression::Identifier("a".into())),
             op: ast::BinaryOp::In,
             right: Box::new(ast::Expression::Tuple(vec![
                 ast::Expression::Literal(ast::Literal::Integer(1)),
@@ -793,7 +793,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("a".to_string())),
+            left: Box::new(ast::Expression::Identifier("a".into())),
             op: ast::BinaryOp::NotIn,
             right: Box::new(ast::Expression::Tuple(vec![
                 ast::Expression::Literal(ast::Literal::Integer(1)),
@@ -834,7 +834,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("a".to_string())),
+            left: Box::new(ast::Expression::Identifier("a".into())),
             op: ast::BinaryOp::In,
             right: Box::new(ast::Expression::Tuple(vec![ast::Expression::Literal(
                 ast::Literal::Boolean(true)
@@ -931,7 +931,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("d".to_string())),
+            left: Box::new(ast::Expression::Identifier("d".into())),
             op: ast::BinaryOp::In,
             right: Box::new(ast::Expression::Tuple(vec![
                 ast::Expression::StringConstructor(
@@ -980,7 +980,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("s".to_string())),
+            left: Box::new(ast::Expression::Identifier("s".into())),
             op: ast::BinaryOp::In,
             right: Box::new(ast::Expression::Tuple(vec![
                 ast::Expression::StringConstructor("hello".to_string()),
@@ -1057,7 +1057,7 @@ mod in_operator {
             }
         )),
         input = ast::Expression::Binary(ast::BinaryExpr {
-            left: Box::new(ast::Expression::Identifier("n".to_string())),
+            left: Box::new(ast::Expression::Identifier("n".into())),
             op: ast::BinaryOp::In,
             right: Box::new(ast::Expression::Tuple(vec![
                 ast::Expression::Literal(ast::Literal::Integer(1)),

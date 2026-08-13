@@ -72,6 +72,7 @@ Reparsed AST:
 
 mod arbitrary {
     use crate::ast::definitions::*;
+    use crate::ast::pretty_print::ident_needs_delimiters;
     use quickcheck::{Arbitrary, Gen};
     use rand::{rng, RngExt as _};
 
@@ -127,6 +128,10 @@ mod arbitrary {
     /// it just uses arbitrary_string, but this allows us to fine tune
     /// easily if we decide to use different rules for identifiers from
     /// strings.
+    /// Note that this is useful for contexts where you need an "identifier"
+    /// with a lowercase "i" -- as in, not an actual IdentifierExpr. For
+    /// example, a collection name in a CollectionSource. Only IdentifierExprs
+    /// retain delimiter information.
     fn arbitrary_identifier(g: &mut Gen) -> String {
         arbitrary_string(g)
     }
@@ -140,7 +145,7 @@ mod arbitrary {
         if bool::arbitrary(g) {
             Expression::Literal(Literal::arbitrary(g))
         } else {
-            Expression::Identifier(arbitrary_identifier(g))
+            Expression::Identifier(IdentifierExpr::arbitrary(g))
         }
     }
 
@@ -636,16 +641,14 @@ mod arbitrary {
                 ),
                 14 => Self::Access(AccessExpr::arbitrary(nested_g)),
                 15 => Self::Subpath(SubpathExpr::arbitrary(nested_g)),
-                16 => Self::Identifier(arbitrary_identifier(g)),
+                16 => Self::Identifier(IdentifierExpr::arbitrary(g)),
                 17 => Self::Is(IsExpr::arbitrary(nested_g)),
                 18 => Self::Like(LikeExpr::arbitrary(nested_g)),
                 19 => Self::Literal(Literal::arbitrary(nested_g)),
                 20 => Self::StringConstructor(arbitrary_string(g)),
                 21 => Self::Tuple((1..4).map(|_| Self::arbitrary(nested_g)).collect()),
                 22 => Self::TypeAssertion(TypeAssertionExpr::arbitrary(nested_g)),
-                // TODO: SQL-3298: Replace `23 => TypeAssertion` with `23 => HigherOrderFunction`
-                23 => Self::TypeAssertion(TypeAssertionExpr::arbitrary(nested_g)),
-                // 23 => Self::HigherOrderFunction(HigherOrderFunctionExpr::arbitrary(nested_g)),
+                23 => Self::HigherOrderFunction(HigherOrderFunctionExpr::arbitrary(nested_g)),
                 24 => Self::ArrayCast(ArrayCastExpr::arbitrary(nested_g)),
                 _ => panic!("missing Expression variant(s)"),
             }
@@ -1008,9 +1011,17 @@ mod arbitrary {
         //     the parser rejecting expressions like 1.a, for example
         fn arbitrary(g: &mut Gen) -> Self {
             Self {
-                expr: Box::new(Expression::Identifier(arbitrary_identifier(g))),
+                expr: Box::new(Expression::Identifier(IdentifierExpr::arbitrary(g))),
                 subpath: arbitrary_identifier(g),
             }
+        }
+    }
+
+    impl Arbitrary for IdentifierExpr {
+        fn arbitrary(g: &mut Gen) -> Self {
+            let name = arbitrary_identifier(g);
+            let is_delimited = ident_needs_delimiters(name.as_str()) || bool::arbitrary(g);
+            Self { name, is_delimited }
         }
     }
 
@@ -1152,7 +1163,7 @@ mod arbitrary {
                 1 => {
                     let rng = &(0..2).collect::<Vec<i32>>();
                     Self::Simple(match g.choose(rng).unwrap() {
-                        0 => Expression::Identifier(arbitrary_identifier(g)),
+                        0 => Expression::Identifier(IdentifierExpr::arbitrary(g)),
                         1 => Expression::Subpath(SubpathExpr::arbitrary(g)),
                         _ => panic!(),
                     })
@@ -1271,7 +1282,29 @@ mod arbitrary {
             let rng = &(0..Self::VARIANT_COUNT).collect::<Vec<_>>();
             match g.choose(rng).unwrap() {
                 0 => Self::UnaryOp(UnaryOp::arbitrary(g)),
-                1 => Self::BinaryOp(BinaryOp::arbitrary(g)),
+                1 => {
+                    let op = BinaryOp::arbitrary(g);
+                    match op {
+                        // `+` and `-` are always parsed as the UnaryOp versions, so we cannot
+                        // create a BinaryOp version of them here or else the reparsed tree would
+                        // differ.
+                        BinaryOp::Add => Self::UnaryOp(UnaryOp::Pos),
+                        BinaryOp::Sub => Self::UnaryOp(UnaryOp::Neg),
+                        BinaryOp::And
+                        | BinaryOp::Concat
+                        | BinaryOp::Div
+                        | BinaryOp::In
+                        | BinaryOp::Mul
+                        | BinaryOp::NotIn
+                        | BinaryOp::Or
+                        | BinaryOp::Comparison(ComparisonOp::Eq)
+                        | BinaryOp::Comparison(ComparisonOp::Gt)
+                        | BinaryOp::Comparison(ComparisonOp::Gte)
+                        | BinaryOp::Comparison(ComparisonOp::Lt)
+                        | BinaryOp::Comparison(ComparisonOp::Lte)
+                        | BinaryOp::Comparison(ComparisonOp::Neq) => Self::BinaryOp(op),
+                    }
+                }
                 2 => Self::Function(FunctionName::arbitrary(g)),
                 _ => panic!("missing NamedFunction variant(s)"),
             }

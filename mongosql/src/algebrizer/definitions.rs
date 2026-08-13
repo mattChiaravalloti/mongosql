@@ -1535,7 +1535,7 @@ impl<'a> Algebrizer<'a> {
             // If we ever see Identifier in algebrize_expression it must be an unqualified
             // reference, because we do not recurse on the expr field of Subpath if it is an
             // Identifier. It may also be a Variable, which is determined by the ExpressionContext.
-            ast::Expression::Identifier(i) => self.algebrize_unqualified_identifier(i),
+            ast::Expression::Identifier(i) => self.algebrize_unqualified_identifier(i.name),
             ast::Expression::Subpath(s) => self.algebrize_subpath(s),
             ast::Expression::Unary(u) => self.algebrize_unary_expr(u),
             ast::Expression::Binary(b) => self.algebrize_binary_expr(b),
@@ -2556,8 +2556,8 @@ impl<'a> Algebrizer<'a> {
     }
 
     fn algebrize_subpath(&self, p: ast::SubpathExpr) -> Result<mir::Expression> {
-        if let ast::Expression::Identifier(s) = *p.expr {
-            return self.algebrize_possibly_qualified_field_access(s, p.subpath);
+        if let ast::Expression::Identifier(i) = *p.expr {
+            return self.algebrize_possibly_qualified_field_access(i.name, p.subpath);
         }
         // The `expr` of a SubpathExpr is algebrized in an implicit type conversion context since a
         // String is unexpected in this position.

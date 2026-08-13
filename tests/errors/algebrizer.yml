@@ -145,6 +145,12 @@ tests:
     should_compile: false
     algebrize_error: "Error 3030: invalid CAST target type 'Date'"
 
+  - description: Error 3035 HigherOrderFunctionWrapper
+    query: "SELECT REDUCE(aa, 0, value + this) FROM foo"
+    current_db: errors_algebrizer
+    should_compile: false
+    algebrize_error: "Error 3035: Invalid array argument for `Reduce`: The first argument must be semantically valid, and must evaluate to either an Array, Null, or Missing. Sub-Error Code 3008: Field `aa` not found. Did you mean: a, b, c, d"
+
   - description: Error 4000 FieldConflictInNonNamespacedResult
     query: "SELECT foo.*, bar.a FROM foo, bar"
     current_db: errors_algebrizer

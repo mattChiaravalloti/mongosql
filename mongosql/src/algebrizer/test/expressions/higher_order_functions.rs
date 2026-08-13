@@ -47,7 +47,7 @@ mod map {
         input =
             ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
@@ -88,7 +88,7 @@ mod map {
                     ast::Literal::Integer(1)
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             })),
     );
@@ -119,7 +119,7 @@ mod map {
                     ast::Expression::Literal(ast::Literal::Null),
                 ])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             })),
     );
@@ -159,9 +159,9 @@ mod map {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
-                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                        right: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             })),
@@ -205,10 +205,10 @@ mod map {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            expr: Box::new(ast::Expression::Identifier("foo".into())),
                             subpath: "this".to_string(),
                         })),
                     }
@@ -243,7 +243,7 @@ mod map {
         input =
             ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Map(ast::MapExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
@@ -273,10 +273,10 @@ mod map {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            expr: Box::new(ast::Expression::Identifier("foo".into())),
                             subpath: "this".to_string(),
                         })),
                     }
@@ -335,7 +335,7 @@ mod filter {
         input = ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Filter(
             ast::FilterExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
@@ -378,7 +378,7 @@ mod filter {
                     ast::Literal::Boolean(true)
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             }
         )),
@@ -411,7 +411,7 @@ mod filter {
                     ast::Expression::Literal(ast::Literal::Null),
                 ])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             }
         )),
@@ -453,9 +453,9 @@ mod filter {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Eq),
-                        right: Box::new(ast::Expression::Identifier("this".to_string())),
+                        right: Box::new(ast::Expression::Identifier("this".into())),
                     }
                 ))),
             }
@@ -501,10 +501,10 @@ mod filter {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Eq),
                         right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            expr: Box::new(ast::Expression::Identifier("foo".into())),
                             subpath: "this".to_string(),
                         })),
                     }
@@ -540,7 +540,7 @@ mod filter {
         input = ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Filter(
             ast::FilterExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
@@ -571,10 +571,10 @@ mod filter {
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Comparison(ast::ComparisonOp::Eq),
                         right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            expr: Box::new(ast::Expression::Identifier("foo".into())),
                             subpath: "this".to_string(),
                         })),
                     }
@@ -637,7 +637,7 @@ mod reduce {
         input = ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Reduce(
             ast::ReduceExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
@@ -683,7 +683,7 @@ mod reduce {
                 )])),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             }
         )),
@@ -718,7 +718,7 @@ mod reduce {
                 ])),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             }
         )),
@@ -749,7 +749,7 @@ mod reduce {
                 )])),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "value".to_string()
+                    "value".into()
                 ))),
             }
         )),
@@ -780,7 +780,7 @@ mod reduce {
                 ),])),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Null)),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "value".to_string()
+                    "value".into()
                 ))),
             }
         )),
@@ -821,7 +821,7 @@ mod reduce {
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("value".to_string())),
+                        left: Box::new(ast::Expression::Identifier("value".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Literal(ast::Literal::Null)),
                     }
@@ -894,20 +894,20 @@ mod reduce {
                     ast::Literal::Integer(1)
                 )])),
                 init_value: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "field".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Binary(ast::BinaryExpr {
-                            left: Box::new(ast::Expression::Identifier("value".to_string())),
+                            left: Box::new(ast::Expression::Identifier("value".into())),
                             op: ast::BinaryOp::Add,
                             right: Box::new(ast::Expression::Binary(ast::BinaryExpr {
-                                left: Box::new(ast::Expression::Identifier("this".to_string())),
+                                left: Box::new(ast::Expression::Identifier("this".into())),
                                 op: ast::BinaryOp::Add,
-                                right: Box::new(ast::Expression::Identifier("value".to_string())),
+                                right: Box::new(ast::Expression::Identifier("value".into())),
                             })),
                         })),
                     }
@@ -996,19 +996,19 @@ mod reduce {
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Binary(ast::BinaryExpr {
                             left: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                                expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                                expr: Box::new(ast::Expression::Identifier("foo".into())),
                                 subpath: "this".to_string(),
                             })),
                             op: ast::BinaryOp::Add,
                             right: Box::new(ast::Expression::Binary(ast::BinaryExpr {
-                                left: Box::new(ast::Expression::Identifier("value".to_string())),
+                                left: Box::new(ast::Expression::Identifier("value".into())),
                                 op: ast::BinaryOp::Add,
                                 right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                                     subpath: "value".to_string(),
                                 })),
                             })),
@@ -1047,7 +1047,7 @@ mod reduce {
         input = ast::Expression::HigherOrderFunction(ast::HigherOrderFunctionExpr::Reduce(
             ast::ReduceExpr {
                 array: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
@@ -1078,7 +1078,7 @@ mod reduce {
                     ast::Literal::Integer(1)
                 )])),
                 init_value: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                    expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                    expr: Box::new(ast::Expression::Identifier("foo".into())),
                     subpath: "a".to_string(),
                 })),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Literal(
@@ -1110,10 +1110,10 @@ mod reduce {
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
                         right: Box::new(ast::Expression::Subpath(ast::SubpathExpr {
-                            expr: Box::new(ast::Expression::Identifier("foo".to_string())),
+                            expr: Box::new(ast::Expression::Identifier("foo".into())),
                             subpath: "this".to_string(),
                         })),
                     }
@@ -1152,7 +1152,7 @@ mod shadowing_variables {
                     ast::Literal::Null
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             })),
     );
@@ -1184,7 +1184,7 @@ mod shadowing_variables {
                     ast::Literal::Boolean(true)
                 )])),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Identifier(
-                    "this".to_string()
+                    "this".into()
                 ))),
             }
         )),
@@ -1232,9 +1232,9 @@ mod shadowing_variables {
                 init_value: Box::new(ast::Expression::Literal(ast::Literal::Integer(1))),
                 f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                     ast::BinaryExpr {
-                        left: Box::new(ast::Expression::Identifier("this".to_string())),
+                        left: Box::new(ast::Expression::Identifier("this".into())),
                         op: ast::BinaryOp::Add,
-                        right: Box::new(ast::Expression::Identifier("value".to_string())),
+                        right: Box::new(ast::Expression::Identifier("value".into())),
                     }
                 ))),
             }
@@ -1472,7 +1472,7 @@ mod shadowing_variables {
                                                             expr: Box::new(ast::Expression::Binary(
                                                                 ast::BinaryExpr {
                                                                     left: Box::new(ast::Expression::Identifier(
-                                                                        "this".to_string(),
+                                                                        "this".into(),
                                                                     )),
                                                                     op: ast::BinaryOp::Concat,
                                                                     right: Box::new(
@@ -1492,7 +1492,7 @@ mod shadowing_variables {
                                                         })),
                                                         op: ast::BinaryOp::Add,
                                                         right: Box::new(ast::Expression::Identifier(
-                                                            "value".to_string()
+                                                            "value".into()
                                                         )),
                                                     })),
                                                     op: ast::BinaryOp::Add,
@@ -1508,12 +1508,12 @@ mod shadowing_variables {
                                                                         f: Box::new(ast::FunctionArgument::Expr(ast::Expression::Binary(
                                                                             ast::BinaryExpr {
                                                                                 left: Box::new(ast::Expression::Identifier(
-                                                                                    "this".to_string()
+                                                                                    "this".into()
                                                                                 )),
                                                                                 op: ast::BinaryOp::Or,
                                                                                 right: Box::new(ast::Expression::Cast(ast::CastExpr {
                                                                                     expr: Box::new(ast::Expression::Identifier(
-                                                                                        "value".to_string()
+                                                                                        "value".into()
                                                                                     )),
                                                                                     to: ast::Type::Boolean,
                                                                                     on_null: Some(ast::Expression::Literal(
@@ -1535,10 +1535,10 @@ mod shadowing_variables {
                                     set_quantifier: None,
                                 })),
                                 op: ast::BinaryOp::Add,
-                                right: Box::new(ast::Expression::Identifier("this".to_string())),
+                                right: Box::new(ast::Expression::Identifier("this".into())),
                             })),
                             op: ast::BinaryOp::Add,
-                            right: Box::new(ast::Expression::Identifier("value".to_string()))
+                            right: Box::new(ast::Expression::Identifier("value".into()))
                         }
                     )),
                     op: ast::BinaryOp::Add,
@@ -1553,7 +1553,7 @@ mod shadowing_variables {
                                     expr: Box::new(ast::Expression::Binary(
                                         ast::BinaryExpr {
                                             left: Box::new(ast::Expression::Cast(ast::CastExpr {
-                                                expr: Box::new(ast::Expression::Identifier("this".to_string())),
+                                                expr: Box::new(ast::Expression::Identifier("this".into())),
                                                 to: ast::Type::Int32,
                                                 on_null: Some(ast::Expression::Literal(
                                                     ast::Literal::Integer(0)
@@ -1565,7 +1565,7 @@ mod shadowing_variables {
                                             op: ast::BinaryOp::Add,
                                             right: Box::new(ast::Expression::Cast(ast::CastExpr {
                                                 expr: Box::new(ast::Expression::Identifier(
-                                                    "value".to_string()
+                                                    "value".into()
                                                 )),
                                                 to: ast::Type::Int32,
                                                 on_null: Some(ast::Expression::Literal(

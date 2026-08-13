@@ -27,7 +27,7 @@ WithQuery: Query = {
 
 NamedQuery: NamedQuery = {
   <i:Identifier> AS LEFT_PAREN <q:SimpleQuery> RIGHT_PAREN => NamedQuery {
-    name: i,
+    name: i.name,
     query: q,
   }
 }
@@ -113,24 +113,24 @@ UnwindDatasource: Datasource = {
 UnwindOption: ExtendedUnwindOption = {
   PATH ARROW <p:PeriodPlus<UnwindPathPart>> => ExtendedUnwindOption::Paths(vec![p]),
   PATH ARROW LEFT_PAREN <p:CommaPlus<PeriodPlus<UnwindPathPart>>> RIGHT_PAREN => ExtendedUnwindOption::Paths(p),
-  INDEX ARROW <i:Identifier> => ExtendedUnwindOption::Index(i),
+  INDEX ARROW <i:Identifier> => ExtendedUnwindOption::Index(i.name),
   OUTER ARROW <o:Boolean> => ExtendedUnwindOption::Outer(o)
 }
 
 // Only INDEX and OUTER are allowed on a PATH part. Putting a PATH in a PATH part
 // would be confusing
 UnwindPathPartOption: UnwindPathPartOption = {
-  INDEX ARROW <i:Identifier> => UnwindPathPartOption::Index(i),
+  INDEX ARROW <i:Identifier> => UnwindPathPartOption::Index(i.name),
   OUTER ARROW <o:Boolean> => UnwindPathPartOption::Outer(o)
 }
 
 UnwindPathPart: UnwindPathPart = {
     <i:Identifier> => UnwindPathPart {
-        field: i, 
+        field: i.name,
         options: Vec::default(),
     },
     <i:Identifier> <o:BracketList<CommaStar<UnwindPathPartOption>>> => UnwindPathPart {
-        field: i, 
+        field: i.name,
         options: o,
     }
 }
@@ -224,18 +224,18 @@ SelectExpression: SelectExpression = {
 OptionallyAliasedExpr: OptionallyAliasedExpr = {
   <e:Expression> <a:(AS? <Identifier>)?> => {
         match a {
-            Some(alias) => OptionallyAliasedExpr::Aliased(AliasedExpr{expr:e, alias}),
+            Some(alias) => OptionallyAliasedExpr::Aliased(AliasedExpr{expr:e, alias: alias.name}),
             None => OptionallyAliasedExpr::Unaliased(e),
         }
   }
 }
 
 AliasedExpr: AliasedExpr = {
-  <e:Expression> <a:(AS? <Identifier>)> => AliasedExpr{expr:e, alias:a}
+  <e:Expression> <a:(AS? <Identifier>)> => AliasedExpr{expr:e, alias:a.name}
 };
 
 SubstarExpr: SubstarExpr = {
-  <i:Identifier> DOT_STAR => SubstarExpr{datasource: i}
+  <i:Identifier> DOT_STAR => SubstarExpr{datasource: i.name}
 };
 
 pub Expression: Expression = {
@@ -402,6 +402,55 @@ Substring: FunctionExpr = {
     }
 }
 
+HigherOrderFunctionExpr: HigherOrderFunctionExpr = {
+    MAP LEFT_PAREN <e1:Expression> COMMA <e2:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Map(MapExpr {
+            array: Box::new(e1),
+            f: Box::new(e2),
+        })
+    },
+    FILTER LEFT_PAREN <e1:Expression> COMMA <e2:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Filter(FilterExpr {
+            array: Box::new(e1),
+            f: Box::new(e2),
+        })
+    },
+    REDUCE LEFT_PAREN <e1:Expression> COMMA <e2:Expression> COMMA <e3:FunctionArgument> RIGHT_PAREN => {
+        HigherOrderFunctionExpr::Reduce(ReduceExpr {
+            array: Box::new(e1),
+            init_value: Box::new(e2),
+            f: Box::new(e3),
+        })
+    },
+}
+
+FunctionArgument: FunctionArgument = {
+    ADD => {
+        FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Pos))
+    },
+    SUB => {
+        FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Neg))
+    },
+    NOT => {
+        FunctionArgument::NamedFunction(NamedFunction::UnaryOp(UnaryOp::Not))
+    },
+    <b:NonOverloadedBinaryOp> => {
+        FunctionArgument::NamedFunction(NamedFunction::BinaryOp(b))
+    },
+    <e:Expression> => {
+        // Check if this is a bare identifier that could be a function name
+        match &e {
+            Expression::Identifier(IdentifierExpr { name: id, is_delimited: false }) => {
+                match FunctionName::try_from(id.as_str()) {
+                    Ok(f) => FunctionArgument::NamedFunction(NamedFunction::Function(f)),
+                    Err(_) => FunctionArgument::Expr(e),
+                }
+            },
+            _ => FunctionArgument::Expr(e),
+        }
+    },
+}
+
 TrimSpec: TrimSpec = {
   LEADING => TrimSpec::Leading,
   TRAILING => TrimSpec::Trailing,
@@ -447,10 +496,10 @@ AccessExpr: AccessExpr = {
   <e:Tier13Expr> LEFT_BRACKET <s:Expression> RIGHT_BRACKET => AccessExpr{expr:e, subfield:Box::new(s)},
 }
 
-Identifier: String = {
-  ID => <>.to_string(),
-  DELIMITED_IDENT_QUOTE => process_delimited_ident(<>),
-  DELIMITED_IDENT_BACKTICK => process_delimited_ident(<>),
+Identifier: IdentifierExpr = {
+  ID => (<>.to_string(), false).into(),
+  DELIMITED_IDENT_QUOTE => (process_delimited_ident(<>), true).into(),
+  DELIMITED_IDENT_BACKTICK => (process_delimited_ident(<>), true).into(),
 };
 
 // A tuple is a grouping of >= 1 elements, like (A), (A,B), (A,B,C), etc.
@@ -522,7 +571,7 @@ BetweenTier<Expr, NextTier>: Box<Expression> = {
 }
 
 SubpathTier<Expr, NextTier>: Box<Expression> = {
-  <expr:SubpathTier<Expr, NextTier>> DOT <subpath:Identifier> => Box::new(Expression::Subpath(SubpathExpr{<>})),
+  <expr:SubpathTier<Expr, NextTier>> DOT <subpath:Identifier> => Box::new(Expression::Subpath(SubpathExpr{expr, subpath: subpath.name})),
   NextTier
 };
 
@@ -569,6 +618,7 @@ BottomExpr: Box<Expression> = {
   Trim => Box::new(Expression::Trim(<>)),
   Extract => Box::new(Expression::Extract(<>)),
   FunctionExpr => Box::new(Expression::Function(<>)),
+  HigherOrderFunctionExpr => Box::new(Expression::HigherOrderFunction(<>)),
   Identifier => Box::new(Expression::Identifier(<>)),
   Literal => Box::new(Expression::Literal(<>)),
   StringConstructor => Box::new(Expression::StringConstructor(<>)),
@@ -619,6 +669,13 @@ MulOp: BinaryOp = {
   STAR => BinaryOp::Mul,
   DIV => BinaryOp::Div,
 };
+
+NonOverloadedBinaryOp: BinaryOp = {
+  InOp,
+  BoolOp,
+  ConcatOp,
+  MulOp,
+}
 
 NotOp: UnaryOp = {
   NOT => UnaryOp::Not
@@ -858,6 +915,7 @@ match {
   r"(?i)extract" => EXTRACT,
   r"(?i)false" => FALSE,
   r"(?i)fetch\s+(first|next)" => FETCH_FIRST,
+  r"(?i)filter" => FILTER,
   r"(?i)flatten" => FLATTEN,
   r"(?i)float" => FLOAT,
   r"(?i)for" => FOR,
@@ -878,6 +936,7 @@ match {
   r"(?i)left" => LEFT,
   r"(?i)limit" => LIMIT,
   r"(?i)long" => LONG,
+  r"(?i)map" => MAP,
   r"(?i)maxkey" => MAXKEY,
   r"(?i)minkey" => MINKEY,
   r"(?i)missing" => MISSING,
@@ -898,6 +957,7 @@ match {
   r"(?i)position" => POSITION,
   r"(?i)precision" => PRECISION,
   r"(?i)real" => REAL,
+  r"(?i)reduce" => REDUCE,
   r"(?i)regex" => REGEX,
   r"(?i)right" => RIGHT,
   r"(?i)rows?\s+only" => ROWS_ONLY,

@@ -63,7 +63,9 @@ pub fn parse_simple_datasource(
 ) -> Result<Datasource, LalrpopError<'static>> {
     let (expr, alias) = ae.take_fields();
     match expr {
-        Expression::Identifier(collection) => Ok(Datasource::Collection(CollectionSource {
+        Expression::Identifier(IdentifierExpr {
+            name: collection, ..
+        }) => Ok(Datasource::Collection(CollectionSource {
             database: None,
             collection,
             alias,
@@ -106,7 +108,7 @@ impl Expression {
 
     pub fn take_identifier_name(self) -> Option<String> {
         match self {
-            Expression::Identifier(s) => Some(s),
+            Expression::Identifier(IdentifierExpr { name: s, .. }) => Some(s),
             _ => None,
         }
     }
