@@ -1346,7 +1346,9 @@ impl PrettyPrint for FunctionArgument {
     fn pretty_print(&self) -> Result<String> {
         Ok(match self {
             FunctionArgument::Expr(e) => e.pretty_print()?,
-            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(u)) => u.pretty_print()?,
+            FunctionArgument::NamedFunction(NamedFunction::UnaryOp(u)) => {
+                u.pretty_print()?.trim().to_string()
+            }
             FunctionArgument::NamedFunction(NamedFunction::BinaryOp(b)) => b.pretty_print()?,
             FunctionArgument::NamedFunction(NamedFunction::Function(f)) => f.pretty_print()?,
         })

@@ -1287,7 +1287,7 @@ mod higher_order_function {
 
     expression_printer_test!(
         filter_with_named_function_arg,
-        expected = "FILTER(a, NOT )", // we intentionally print a space after unary ops
+        expected = "FILTER(a, NOT)",
         input = "FILTER(a, NOT)"
     );
 
