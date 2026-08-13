@@ -10,21 +10,22 @@ Each error type (schema, parser, and algebrizer) is detailed in separate section
 The following errors occur when something goes wrong while handling the schema of the data source (collection) that the SQL query is querying data from.
 These errors often occur when you use data types in an incorrect or invalid way.
 
-| Error Code | Error Description                                                                                                                                                                 |
-| ---------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Error 1001](#error-1001)  | A function (e.g., Sin, Abs, Round) has the incorrect number of arguments.                                                                                                               |
-| [Error 1002](#error-1002)  | The specified operation (e.g., Sub, And, Substring) has argument(s) of the incorrect type (e.g., string, int).                                                                                |
-| [Error 1003](#error-1003)  | The argument provided to the aggregation is not of a type that is comparable to itself.                                                                                           |                                                                                                                                             |
-| [Error 1005](#error-1005)  | The specified comparison operation (e.g., Lte, Between) could not be done due to incomparable types of their operands (e.g., comparing an int to a string).                                   |
-| [Error 1007](#error-1007)  | Cannot access field, because it cannot be found (and likely doesn't exist).                                                                                                 |
-| [Error 1008](#error-1008)  | The cardinality of a subquery's result set may be greater than 1. The result set MUST have a cardinality of 0 or 1.                                                               |
-| [Error 1010](#error-1010)  | Cannot sort by the specified key because it is of a type that can't be compared against itself.                                                                                   |
-| [Error 1011](#error-1011)  | Cannot group by the specified key because it is of a type that can't be compared against itself.                                                                                  |
-| [Error 1014](#error-1014)  | UNWIND INDEX name conflicts with existing field name.                                                                                                                             |
-| [Error 1016](#error-1016)  | The collection in the specified database could not be found.                                                                                                                      |
-| [Error 1017](#error-1017)  | Extended JSON detected in comparison operation. MongoSQL does not support direct comparisons with extended JSON. Use casting instead (look at "Resolution Steps" for an example). |
-| [Error 1018](#error-1018)  | A field has an unsupported BSON type. |
-| [Error 1019](#error-1019)  | A field of type Binary data has the unsupported subtype of uuid old (subtype 3). |
+| Error Code                | Error Description                                                                                                                                                                 |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Error 1001](#error-1001) | A function (e.g., Sin, Abs, Round) has the incorrect number of arguments.                                                                                                         |
+| [Error 1002](#error-1002) | The specified operation (e.g., Sub, And, Substring) has argument(s) of the incorrect type (e.g., string, int).                                                                    |
+| [Error 1003](#error-1003) | The argument provided to the aggregation is not of a type that is comparable to itself.                                                                                           |                                                                                                                                             |
+| [Error 1005](#error-1005) | The specified comparison operation (e.g., Lte, Between) could not be done due to incomparable types of their operands (e.g., comparing an int to a string).                       |
+| [Error 1007](#error-1007) | Cannot access field, because it cannot be found (and likely doesn't exist).                                                                                                       |
+| [Error 1008](#error-1008) | The cardinality of a subquery's result set may be greater than 1. The result set MUST have a cardinality of 0 or 1.                                                               |
+| [Error 1010](#error-1010) | Cannot sort by the specified key because it is of a type that can't be compared against itself.                                                                                   |
+| [Error 1011](#error-1011) | Cannot group by the specified key because it is of a type that can't be compared against itself.                                                                                  |
+| [Error 1014](#error-1014) | UNWIND INDEX name conflicts with existing field name.                                                                                                                             |
+| [Error 1016](#error-1016) | The collection in the specified database could not be found.                                                                                                                      |
+| [Error 1017](#error-1017) | Extended JSON detected in comparison operation. MongoSQL does not support direct comparisons with extended JSON. Use casting instead (look at "Resolution Steps" for an example). |
+| [Error 1018](#error-1018) | A field has an unsupported BSON type.                                                                                                                                             |
+| [Error 1019](#error-1019) | A field of type Binary data has the unsupported subtype of uuid old (subtype 3).                                                                                                  |
+| [Error 1020](#error-1020) | A schema error occurred in the context of a higher order function (Map, Filter, or Reduce).                                                                                       |
 
 ## Error Codes Beginning With "2" Overview
 
@@ -67,6 +68,7 @@ The following errors occur when something goes wrong while converting the SQL qu
 | [Error 3029](#error-3029) | The UNWIND PATH option is not an identifier. The UNWIND PATH option must be an identifier.                                                                                                                   |
 | [Error 3030](#error-3030) | The target type of the CAST is an invalid type (i.e., it's either an unknown type or a type that MongoSQL does not support casting for).                                                                     |
 | [Error 3034](#error-3034) | A sort key is invalid, because it uses complex expressions (i.e., `ORDER BY {'a': b}.a` is invalid).                                                                                                         |
+| [Error 3035](#error-3035) | An error occured in the context of a higher order function (Map, Filter, or Reduce).                                                                                                         |
 
 ## Error Codes Beginning With "4" Overview
 
@@ -181,7 +183,18 @@ The following errors occur when something goes wrong while using the excludeName
 
 - **Description:** A field of type Binary data has the unsupported subtype of uuid old.
 - **Common Causes:** Historically, different drivers have written Uuids using different byte orders. This may occur for older data written by a driver using the now-unsupported uuid type.
-- **Resolution Steps:** Querying this data is not supported by Atlas SQL. 
+- **Resolution Steps:** Querying this data is not supported by Atlas SQL.
+
+### Error 1020
+
+- **Description:** A schema error occurred in the context of a higher order function (Map, Filter, or Reduce). This error is a wrapper for other schema errors.
+- **Common Causes:** There are several root causes for this error:
+  1. Invalid usage of variable `this`. Recall that usages of the `this` variable must be satisfied by the schema of the elements of the array. For example, `MAP(['a'], this + 1)` is invalid because `this + 1` expects `this` to be a numeric type, but the elements of the array are strings.
+  2. Invalid usage of variable `value` because of the initial value. Recall that usages of the `value` variable must be satisfied by the both the schema of the initial value and the schema of the result of the accumulator function for `REDUCE`. For example, `REDUCE(['a'], 0, value || this)` is invalid because `value || this` expects `value` to be a string, but the initial value is a number.
+  3. Invalid usage of variable `value` because of the result of the accumulator function. Similar to before, except in this case it is the accumulated result that causes the problem. For example, `REDUCE(array_field, 'a', CASE value WHEN 'a' THEN 1 ELSE 1 END)` is invalid because `CASE value WHEN 'a' THEN 1 ELSE 1 END` expects `value` to be a string, but the result of the accumulator function is a number.
+  4. Invalid initial value argument. The initial value must be semantically valid. For example, `REDUCE([1], 'a' + 1, this + value)` is invalid because the initial value is not a valid expression since you cannot add a string and a number.
+  5. Invalid function argument. The function argument must be semantically valid. It must have the correct number of arguments and the arguments must have the correct types. For example, `MAP([1], this + 'a')` is invalid because the function argument is not a valid expression since you cannot add a string and a number.
+- **Resolution Steps:** Resolve the underlying error according to the resolution steps on this page. This error wraps the underlying error and provides its code and error message. One of the root causes above will be identified as part of the wrapper to aid you in identifying which part of the higher order function is at the root of the problem. 
 
 ### Error 2000
 
@@ -364,6 +377,15 @@ The following errors occur when something goes wrong while using the excludeName
     causes this error, because `CAST(d AS DOCUMENT)` is a complex expression.
 - **Resolution Steps:** Make sure you only sort by "pure" field path. A "pure" field path consists only of
     identifiers, such as `foo.d.a` or `a`.
+
+### Error 3035
+
+- **Description:** An error occurred in the context of a higher order function (Map, Filter, or Reduce). This error is a wrapper for other 3000 series errors.
+- **Common Causes:** There are several root causes for this error:
+  1. An invalid array argument. For example, `FILTER(1, this = 1)` is invalid because the first argument must be an array.
+  2. An invalid initial value argument for `REDUCE`. For example, `REDUCE([1], unknown_field, value + this)` would be invalid if `unknown_field` does not exist.
+  3. An invalid function argument. For example, `MAP([1], this * unknown_field)` would be invalid if `unknown_field` does not exist.
+- **Resolution Steps:** Resolve the underlying error according to the resolution steps on this page. This error wraps the underlying error and provides its code and error message. One of the root causes above will be identified as part of the wrapper to aid you in identifying which part of the higher order function is at the root of the problem.
 
 ### Error 4000
 - **Description:** The non-namespaced result set cannot be returned due to field name conflict(s).
