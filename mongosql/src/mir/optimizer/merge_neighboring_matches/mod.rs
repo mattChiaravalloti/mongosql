@@ -11,6 +11,7 @@ mod test;
 
 use super::Optimizer;
 use crate::mir::optimizer::util::ContainsSubqueryVisitor;
+use crate::mir::{MatchFilter, MatchLanguageLogical, MatchLanguageLogicalOp, MatchQuery, MqlStage};
 use crate::{
     mir::{
         schema::SchemaInferenceState, visitor::Visitor, Expression, Filter, ScalarFunction,
@@ -56,6 +57,55 @@ impl MergeNeighboringMatchesVisitor {
 }
 
 impl Visitor for MergeNeighboringMatchesVisitor {
+    fn visit_match_filter(&mut self, node: MatchFilter) -> MatchFilter {
+        // Recurse first so that we've already merged children before we try to merge this node.
+        let MatchFilter {
+            source: this_source,
+            condition: this_condition,
+            cache: this_cache,
+        } = node.walk(self);
+        match *this_source {
+            Stage::MqlIntrinsic(MqlStage::MatchFilter(child)) => {
+                let MatchFilter {
+                    source: other_source,
+                    condition: other_condition,
+                    ..
+                } = *child;
+
+                // Combine the child condition with the parent condition
+                let conditions: Vec<MatchQuery> = match other_condition {
+                    // the child is already a $and, append this condition to that and
+                    // instead of nesting a new $and inside it
+                    MatchQuery::Logical(MatchLanguageLogical {
+                        op: MatchLanguageLogicalOp::And,
+                        mut args,
+                        ..
+                    }) => {
+                        args.push(this_condition);
+                        args
+                    }
+                    // otherwise, create a vector with the child condition, and the condition of this filter
+                    combined_conditions => vec![combined_conditions, this_condition],
+                };
+                MatchFilter {
+                    source: other_source,
+                    condition: MatchQuery::Logical(MatchLanguageLogical {
+                        op: MatchLanguageLogicalOp::And,
+                        args: conditions,
+                        cache: Default::default(),
+                    }),
+                    cache: this_cache,
+                }
+            }
+            // nothing to merge; rebuild the filter from its own (unchanged) fields
+            other => MatchFilter {
+                source: Box::new(other),
+                condition: this_condition,
+                cache: this_cache,
+            },
+        }
+    }
+
     fn visit_filter(&mut self, node: Filter) -> Filter {
         let node = node.walk(self);
         match node.source.as_ref() {
